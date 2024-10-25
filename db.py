@@ -6,10 +6,10 @@ from models.User import  user, usercvs
 from models.Additional import addressScheme, countryScheme, phonenumberScheme
 from models.BaseModel import Base
 
-from dbconfig import SECRET
+import dbconfig as DB
 
 engine = create_engine(
-    f"postgresql+psycopg2://{SECRET['username']}:{SECRET['password']}@localhost/{SECRET['db_name']}", 
+    f"postgresql+psycopg2://{DB.USERNAME}:{DB.PASSWORD}@localhost/{DB.NAME}", 
     echo=True, pool_size=6, max_overflow=10
 )
 engine.connect()
