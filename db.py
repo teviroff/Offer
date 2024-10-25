@@ -16,7 +16,16 @@ engine.connect()
 
 print(engine)
 
+# Base.metadata.drop_all(engine)
 Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 session = Session()
+
+def create_user(name, surname):
+    us = user.User (
+        name = name,
+        surname = surname
+    )
+    session.add(us)
+    session.commit();
 session.close()

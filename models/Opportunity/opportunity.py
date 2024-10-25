@@ -6,7 +6,7 @@ from ..BaseModel import Base
 
 class Opportunity(Base):
     __tablename__ = 'opportunity'
-    ID = Column(Integer, primary_key=True)
+    ID = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(50))
     providerID = Column(Integer, ForeignKey('opportunity_provider.ID'))
     descriptionFile = Column(String(128))
@@ -62,3 +62,8 @@ class OpportunityToAddress(Base):
     ID = Column(Integer, primary_key=True)
     opportunityID = Column(Integer, ForeignKey('opportunity.ID'))
     addressID = Column(Integer, ForeignKey('address.ID'))
+
+class Lol(Base):
+    __tablename__ = 'lolik'
+    ID = Column(Integer, primary_key=True)
+    x = Column(String(20))
