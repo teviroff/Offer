@@ -89,7 +89,7 @@ for link in allVacancyCard_link:
 #   for s in allVacancyForms:
 #     f.write(str(s) + '\n')
 
-with open('allVacancyCard_JSON_Studyqa.json', 'w', encoding='utf-8') as json_file:
+with open('/JSON_webs/allVacancyCard_JSON_Studyqa.json', 'w', encoding='utf-8') as json_file:
   json_file.write("{")
   for for_json in allVacancyCard_JSON:
     json.dump(for_json, json_file, ensure_ascii=False, indent=4)

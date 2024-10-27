@@ -128,14 +128,14 @@ for form_link in allVacancyForms:
 
   allFormsJSON.append(form_data)
 
-with open('allVacancy_formData.json', 'w', encoding='utf-8') as json_file:
-  json_file.write("{")
-  for for_json in allFormsJSON:
-    json.dump(for_json, json_file, ensure_ascii=False, indent=4)
-    json_file.write(",\n")
-  json_file.write("{ }\n}")
+# with open('allVacancy_formData.json', 'w', encoding='utf-8') as json_file:
+#   json_file.write("{")
+#   for for_json in allFormsJSON:
+#     json.dump(for_json, json_file, ensure_ascii=False, indent=4)
+#     json_file.write(",\n")
+#   json_file.write("{ }\n}")
 
-with open('allVacancyCard_JSON.json', 'w', encoding='utf-8') as json_file:
+with open('/JSON_webs/allVacancyCard_JSON.json', 'w', encoding='utf-8') as json_file:
   json_file.write("{")
   for for_json in allVacancyCard_JSON:
     json.dump(for_json, json_file, ensure_ascii=False, indent=4)

@@ -1,5 +1,6 @@
 from includes import *
-from Offer.parser_Yandex import allFormsJSON
+
+from parser_Yandex import allFormsJSON
 
 for card in allFormsJSON:
   link = card['link']
