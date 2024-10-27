@@ -16,8 +16,8 @@ class City(Base):
     __tablename__ = 'city'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(50))
     country_id: Mapped[int] = mapped_column(ForeignKey('country.id'))
+    name: Mapped[str] = mapped_column(String(50))
 
     country: Mapped['Country'] = relationship(back_populates='cities')
     streets: Mapped[list['Street']] = relationship(back_populates='city')
@@ -26,8 +26,8 @@ class Street(Base):
     __tablename__ = 'street'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(50))
     city_id: Mapped[int] = mapped_column(ForeignKey('city.id'))
+    name: Mapped[str] = mapped_column(String(50))
 
     city: Mapped['City'] = relationship(back_populates='streets')
     addresses: Mapped[list['Address']] = relationship(back_populates='street')
