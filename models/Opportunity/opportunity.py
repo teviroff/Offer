@@ -1,69 +1,87 @@
-import datetime
-from sqlalchemy import Column, DateTime, Integer, String, create_engine, ForeignKey
-import sqlalchemy
+from sqlalchemy import String, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..BaseModel import Base
+from models.base import Base, FileURI, file_uri
+from models.auxillary.address import City
+from models.opportunity import response
 
 class Opportunity(Base):
     __tablename__ = 'opportunity'
-    ID = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(50))
-    providerID = Column(Integer, ForeignKey('opportunity_provider.ID'))
-    descriptionFile = Column(String(128))
-    requiredData = Column(String(128))
 
-class OpportunityTags(Base):
-    __tablename__ = 'opportunity_tags'
-    ID = Column(Integer, primary_key=True)
-    name = Column(String(20))
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(50))
+    provider_id: Mapped[int] = \
+        mapped_column(ForeignKey('opportunity_provider.id'))
+    description: Mapped[file_uri] = mapped_column(FileURI)
+    # might change to uri into NoSQL db
+    required_data: Mapped[file_uri] = mapped_column(FileURI)
 
-class OpportunityToTags(Base):
-    __tablename__ = 'opportunity_to_tags'
-    ID = Column(Integer, primary_key=True)
-    opportunityID = Column(Integer, ForeignKey('opportunity.ID'))
-    tagID = Column(Integer, ForeignKey('opportunity_tags.ID'))
-
-class OpportunityResponse(Base):
-    __tablename__ = 'opportunity_response'
-    ID = Column(Integer, primary_key=True)
-    userID = Column(Integer, ForeignKey('user.ID'))
-    opportunityID = Column(Integer, ForeignKey('opportunity.ID'))
-    responseData = Column(Integer)
-
-class HistoryEntry(Base):
-    __tablename__ = 'history_entry'
-    ID = Column(Integer, primary_key=True)
-    status = Column(String(10))
-    description = Column(String(256))
-    date = Column(DateTime, default=datetime.datetime.now)
-
-class ResponseHistoryEntry(Base):
-    __tablename__ = 'response_history_entry'
-    ID = Column(Integer, primary_key=True)
-    responseID = Column(Integer, ForeignKey('opportunity_response.ID'))
-    entryID = Column(Integer, ForeignKey('history_entry.ID'))
-
-class OpportunityCard(Base):
-    __tablename__ = 'opportunity_card'
-    ID = Column(Integer, primary_key=True)
-    opportunityID = Column(Integer, ForeignKey('opportunity.ID'))
-    layoutType = Column(Integer, default=1)
-    descriptiion = Column(String(256))
-    image = Column(String(128))
+    provider: Mapped['OpportunityProvider'] = \
+        relationship(back_populates='opportunity_provider')
+    tags: Mapped[list['OpportunityTag']] = \
+        relationship(secondary='opportunity_to_tag',
+                     back_populates='opportunities')
+    geo_tags: Mapped[list['OpportunityGeoTag']] = \
+        relationship(secondary='opportunity_to_geo_tag',
+                     back_populates='opportunities')
+    cards: Mapped[list['OpportunityCard']] = \
+        relationship(back_populates='opportunity_card')
+    responses: Mapped[list['response.OpportunityResponse']] = \
+        relationship(back_populates='opportunity')
 
 class OpportunityProvider(Base):
     __tablename__ = 'opportunity_provider'
-    ID = Column(Integer, primary_key=True)
-    name = Column(String(20))
-    logo = Column(String(128))
 
-class OpportunityToAddress(Base):
-    __tablename__ = 'opportunity_to_address'
-    ID = Column(Integer, primary_key=True)
-    opportunityID = Column(Integer, ForeignKey('opportunity.ID'))
-    addressID = Column(Integer, ForeignKey('address.ID'))
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(50))
+    logo: Mapped[file_uri] = mapped_column(FileURI, nullable=True)
 
-class Lol(Base):
-    __tablename__ = 'lolik'
-    ID = Column(Integer, primary_key=True)
-    x = Column(String(20))
+    opportunities: Mapped[list['Opportunity']] = \
+        relationship(back_populates='opportunity')
+
+class OpportunityTag(Base):
+    __tablename__ = 'opportunity_tag'
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(50))
+
+    opportunities: Mapped[list['Opportunity']] = \
+        relationship(secondary='opportunity_to_tag', back_populates='tags')
+
+class OpportunityGeoTag(Base):
+    __tablename__ = 'opportunity_geo_tag'
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    city_id: Mapped[int] = mapped_column(ForeignKey('city.id'))
+
+    city: Mapped['City'] = relationship()
+    opportunities: Mapped[list['Opportunity']] = \
+        relationship(secondary='opportunity_to_geo_tag',
+                     back_populates='geo_tags')
+
+class OpportunityToTag(Base):
+    __tablename__ = 'opportunity_to_tag'
+
+    opportunity_id: Mapped[int] = \
+        mapped_column(ForeignKey('opportunity.id'), primary_key=True)
+    tag_id: Mapped[int] = \
+        mapped_column(ForeignKey('opportunity_tag.id'), primary_key=True)
+
+class OpportunityToGeoTag(Base):
+    __tablename__ = 'opportunity_to_geo_tag'
+
+    opportunity_id: Mapped[int] = \
+        mapped_column(ForeignKey('opportunity.id'), primary_key=True)
+    geo_tag_id: Mapped[int] = \
+        mapped_column(ForeignKey('opportunity_geo_tag.id'), primary_key=True)
+
+class OpportunityCard(Base):
+    __tablename__ = 'opportunity_card'
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    opportunity_id: Mapped[int] = mapped_column(ForeignKey('opportunity.id'))
+
+    # TODO: end up on a concrete design and add corresponding columns
+
+    opportunity: Mapped['Opportunity'] = \
+        relationship(back_populates='opportunity')
