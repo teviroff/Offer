@@ -1,6 +1,6 @@
 from includes import *
 
-url = 'https://ru.studyqa.com/internships'
+url = 'https://ru.studyqa.com/internships/countries/cities/industries?page='
 
 service = ChromeService(executable_path=ChromeDriverManager().install())
 
@@ -8,19 +8,23 @@ options = webdriver.ChromeOptions()
 # options.add_argument("--headless")
 
 driver = webdriver.Chrome(service=service, options=options)
-driver.get(url)
-page = driver.page_source
-
-soup = BeautifulSoup(page, "html.parser")
 
 #------------------Writing the html code of the page to the file----------------------
 # with open('out.html', 'w', encoding='utf-8') as f:
 #   f.write(page)
 
+culc = 0
 allVacancyCard_link = []
-allVacancyCard = soup.findAll('div', class_='cards__list')
-for link in soup.findAll('a', class_='btn btn-secondary'):
-  allVacancyCard_link.append(link.get('href'))
+for page in range(1, 8):
+  driver.get(url + f'{page}')
+  page = driver.page_source
+
+  soup = BeautifulSoup(page, "html.parser")
+  allVacancyCard = soup.findAll('div', class_='cards__list')
+  for link in soup.findAll('a', class_='btn btn-secondary'):
+    culc+=1
+    print(culc)
+    allVacancyCard_link.append(link.get('href'))
 
 # allVacancyCard_link = allVacancyCard_link[:1]
 
