@@ -23,7 +23,7 @@ for link in soup.findAll('a', class_='lc-jobs-vacancy-card__link'):
   allVacancyCard_link.append('https://yandex.ru' + link.get('href'))
 allVacancyCard_link = allVacancyCard_link[1:]
 
-# allVacancyCard_link = allVacancyCard_link[:1]
+allVacancyCard_link = allVacancyCard_link[:1]
 
 #------------------Writing the html code of the job cards to the file----------------
 # with open('allVacancy.html', 'w', encoding='utf-8') as f:
@@ -35,6 +35,7 @@ allVacancyCard_link = allVacancyCard_link[1:]
 #     f.write(str(s) + '\n')
 
 allVacancyForms = []
+allFormsJSON = []
 allVacancyCard_JSON = []
 for link in allVacancyCard_link:
   card_data = {}
@@ -53,8 +54,16 @@ for link in allVacancyCard_link:
     card_tags.append(tag.text)
   card_data['tags'] = card_tags
   
-  sleep(2)
-  tmp = soupVacancy.find('iframe', class_='lc-iframe__iframe').get('src')
+  sleep(1)
+  tmp1 = soupVacancy.find('iframe', class_='lc-iframe__iframe')
+  while(tmp1 is None):
+    driver.get(link)
+    pageVacancy = driver.page_source
+    soupVacancy = BeautifulSoup(pageVacancy, "html.parser")
+    sleep(1)
+    tmp1 = soupVacancy.find('iframe', class_='lc-iframe__iframe')
+  
+  tmp = tmp1.get('src')
   form_link = ''
   for s in tmp:
     if s != '?':
@@ -74,18 +83,19 @@ for link in allVacancyCard_link:
 
   for thing in soupForm.findAll('div', class_='QuestionMarkup TextQuestion Question'):
     for thing2 in thing.findAll('ol'):
-      form_data[thing2.text.replace("\n", "")] = {'value': '', 'type':'string'}
+      form_data[thing2.text.replace("\n", "")] = {'value': '1', 'type':'string'}
     for thing2 in thing.findAll('p'):
       if thing2.text != '&nbsp;':
-        form_data[thing2.text.replace("\n", "")] = {'value': '', 'type':'string'}
+        form_data[thing2.text.replace("\n", "")] = {'value': '2', 'type':'string'}
       
   for thing in soupForm.findAll('div', class_='QuestionMarkup FileQuestion Question'):
     for thing2 in thing.findAll('ol'):
-      form_data[thing2.text.replace("\n", "")] = {'type':'file'}
+      form_data[thing2.text.replace("\n", "")] = {'value': '3', 'type':'file'}
     for thing2 in thing.findAll('p'):
       if thing2.text != '&nbsp;' and thing2.text != 'Выберите файл':
-        form_data[thing2.text.replace("\n", "")] = {'type':'file'}
+        form_data[thing2.text.replace("\n", "")] = {'value': '4', 'type':'file'}
 
+  allFormsJSON.append(form_data)
   card_data['form'] = form_data
   allVacancyCard_JSON.append(card_data)
     
@@ -95,39 +105,6 @@ for link in allVacancyCard_link:
 #   for s in allVacancyForms:
 #     f.write(str(s) + '\n')
 
-allFormsJSON = []
-for form_link in allVacancyForms:
-  driver.get(form_link)
-  sleep(1)
-  pageForm = driver.page_source
-  soupForm = BeautifulSoup(pageForm, "html.parser")
-
-  oneFormTextQuestions = []
-  oneFormFileQuestions = []
-
-  form_data = {}
-
-  form_data['link'] = form_link
-
-  iterrrrr = 1
-  for thing in soupForm.findAll('div', class_='QuestionMarkup TextQuestion Question'):
-    for thing2 in thing.findAll('ol'):
-      form_data[thing2.text.replace("\n", "")] = {'value': str(iterrrrr), 'type':'string'}
-      iterrrrr+=1
-    for thing2 in thing.findAll('p'):
-      if thing2.text != '&nbsp;':
-        form_data[thing2.text.replace("\n", "")] = {'value': str(iterrrrr), 'type':'string'}
-      iterrrrr+=1
-      
-  for thing in soupForm.findAll('div', class_='QuestionMarkup FileQuestion Question'):
-    for thing2 in thing.findAll('ol'):
-      form_data[thing2.text.replace("\n", "")] = {'type':'file'}
-    for thing2 in thing.findAll('p'):
-      if thing2.text != '&nbsp;' and thing2.text != 'Выберите файл':
-        form_data[thing2.text.replace("\n", "")] = {'type':'file'}
-
-  allFormsJSON.append(form_data)
-
 # with open('allVacancy_formData.json', 'w', encoding='utf-8') as json_file:
 #   json_file.write("{")
 #   for for_json in allFormsJSON:
@@ -135,7 +112,7 @@ for form_link in allVacancyForms:
 #     json_file.write(",\n")
 #   json_file.write("{ }\n}")
 
-with open('/JSON_webs/allVacancyCard_JSON.json', 'w', encoding='utf-8') as json_file:
+with open('Offer/JSON_webs/allVacancyCard_JSON.json', 'w', encoding='utf-8') as json_file:
   json_file.write("{")
   for for_json in allVacancyCard_JSON:
     json.dump(for_json, json_file, ensure_ascii=False, indent=4)

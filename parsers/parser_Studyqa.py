@@ -58,15 +58,12 @@ for link in allVacancyCard_link:
 
 
   allVacancyForms.append(form_link)
-  driver.get(form_link)
-  sleep(1)
-  pageForm = driver.page_source
-  soupForm = BeautifulSoup(pageForm, "html.parser")
 
   form_data = {}
 
   form_data['link'] = form_link
 
+  soupForm = soup.find('div', class_='form-group')
   for thing in soupForm.findAll('div', class_='form-field'):
     if(thing.find('div', class_='select-wrap') is None):
       name = thing.find('input').get('placeholder')
@@ -89,7 +86,7 @@ for link in allVacancyCard_link:
 #   for s in allVacancyForms:
 #     f.write(str(s) + '\n')
 
-with open('/JSON_webs/allVacancyCard_JSON_Studyqa.json', 'w', encoding='utf-8') as json_file:
+with open('Offer/JSON_webs/allVacancyCard_JSON_Studyqa.json', 'w', encoding='utf-8') as json_file:
   json_file.write("{")
   for for_json in allVacancyCard_JSON:
     json.dump(for_json, json_file, ensure_ascii=False, indent=4)
