@@ -2,4 +2,4 @@ venv
 __pycache__
 logs
 dbconfig.py
-testing.py
+# testing.py
