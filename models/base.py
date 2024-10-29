@@ -8,4 +8,4 @@ class Base(DeclarativeBase):
 
 # Type aliases for consistency
 FileURI = String(128)
-file_uri = NewType('file_uri', str)
+file_uri = str

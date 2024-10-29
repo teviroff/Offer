@@ -1,7 +1,6 @@
 from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import sessionmaker
 
-# unused imports, but required by sqlalchemy
 from models.base import Base
 from models.auxillary.address import Country, City, Street, Address
 from models.auxillary.phone_number import PhoneNumber
@@ -16,7 +15,7 @@ import dbconfig as DB
 
 def get_engine(user: str, password: str, host: str, 
                port: int, db_name: str) -> Engine:
-    url = f'postgresql+psycopg2://{user}:{password}@{host}:{port}/{db_name}'
+    url = f'postgresql+psycopg://{user}:{password}@{host}:{port}/{db_name}'
     engine = create_engine(url)
     return engine
 
