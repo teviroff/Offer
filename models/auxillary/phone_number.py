@@ -27,7 +27,7 @@ class PhoneNumber(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     country_id: Mapped[int] = mapped_column(ForeignKey('country.id'))
-    number: Mapped[str] = mapped_column(String(10))
+    sub_number: Mapped[str] = mapped_column(String(12))
 
     country: Mapped['Country'] = relationship()
 

@@ -12,6 +12,7 @@ from models.base import Base, FileURI, file_uri
 from models.auxillary.address import Address
 from models.auxillary.phone_number import PhoneNumber
 import models.dataclasses as _
+import serializers.user as serializers
 
 import logging
 
@@ -44,23 +45,23 @@ class User(Base):
         return sha256(password.encode()).hexdigest()
 
     @classmethod
-    def create(cls, session: Session, credentials: _.UserCredentials) -> Self | CreateUserError:
-        user = session.query(User).filter(User.email == credentials.email).first()
+    def create(cls, session: Session, fields: serializers.UserCredentials) -> Self | CreateUserError:
+        user = session.query(User).filter(User.email == fields.email).first()
         if user is not None:
             logger.debug('\'User.create\' exited with \'NON_UNIQUE_EMAIL\' '
-                         'error (email=\'%s\')', credentials.email)
+                         'error (email=\'%s\')', fields.email)
             return CreateUserError(
                 error_code=CreateUserErrorCode.NON_UNIQUE_EMAIL,
                 error_message='User with given email already exists',
             )
-        user = User(email=credentials.email,
-                    password_hash=cls.hash_password(credentials.password))
+        user = User(email=fields.email,
+                    password_hash=cls.hash_password(fields.password))
         user.user_info = UserInfo(user=user)
         session.add(user)
         return user
 
 class UpdateUserInfoErrorCode(IntEnum):
-    NO_ACTIVE_SESSION = 0
+    INVALID_USER_ID = 0
 
 @dataclass
 class UpdateUserInfoError:
@@ -91,40 +92,26 @@ class UserInfo(Base):
     def fullname(self) -> str:
         return f'{self.name} {self.surname}'
 
-    def __update_name(self, new_name: str) -> None:
+    def __update_name(self, new_name: str, *args, **kwargs) -> None:
         self.name = new_name
 
-    def __update_surname(self, new_surname: str) -> None:
+    def __update_surname(self, new_surname: str, *args, **kwargs) -> None:
         self.surname = new_surname
 
-    def __update_birthday(self, new_birthday: _.Date) -> None:
+    def __update_birthday(self, new_birthday: _.Date, *args, **kwargs) -> None:
         self.birthday = datetime(new_birthday.year, new_birthday.month,
                                  new_birthday.day)
 
-    def __get_session(self) -> Session | UpdateUserInfoError:
-        session = object_session(self)
-        if session is None:
-            logger.debug('\'UserInfo.update\' exited with \'NO_ACTIVE_SESSION\' '
-                         'error (id=%i)', self.user_id)
-            return UpdateUserInfoError(
-                error_code=UpdateUserInfoErrorCode.NO_ACTIVE_SESSION,
-                error_message='No active session found for this \'UserInfo\'',
-            )
-        return session
-
-    def __update_address(self, new_address: _.Address) -> None | UpdateUserInfoError:
-        session = self.__get_session()
-        if not isinstance(session, Session):
-            return session
+    def __update_address(self, new_address: _.Address, *args,
+                         session: Session, **kwargs) -> None:
         self.address = Address.get_or_create(session, new_address)
 
-    def __update_phone_number(self, new_phone_number: _.PhoneNumber) -> None | UpdateUserInfoError:
-        session = self.__get_session()
-        if not isinstance(session, Session):
-            return session
+    def __update_phone_number(self, new_phone_number: _.PhoneNumber, *args,
+                              session: Session, **kwargs) -> None:
         self.phone_number = PhoneNumber.get_or_create(session, new_phone_number)
     
-    def __update_avatar(self, new_avatar: file_uri) -> None:
+    # TODO: add separate method for update
+    def __update_avatar(self, new_avatar: file_uri, *args, **kwargs) -> None:
         self.avatar = new_avatar
     
     __field_handlers = (
@@ -133,16 +120,22 @@ class UserInfo(Base):
         ('birthday', __update_birthday),
         ('address', __update_address),
         ('phone_number', __update_phone_number),
-        ('avatar', __update_avatar),
     )
 
-    def update(self, new_fields: _.UserInfo) -> None | UpdateUserInfoError:
+    @classmethod
+    def update(cls, session: Session, info: serializers.UserInfo) -> None | UpdateUserInfoError:
+        user: User | None = session.query(User).get(info.user_id)
+        if user is None:
+            logger.debug('\'UserInfo.update\' exited with \'INVALID_USER_ID\' '
+                         'error (user_id=%i)', info.user_id)
+            return UpdateUserInfoError(
+                error_code=UpdateUserInfoErrorCode.INVALID_USER_ID,
+                error_message='User with provided id doesn\'t exist'
+            )
         for field, handler in UserInfo.__field_handlers:
-            if getattr(new_fields, field) is None:
+            if getattr(info, field) is None:
                 continue
-            result = handler(self, getattr(new_fields, field))
-            if result is not None:
-                return result
+            handler(user.user_info, getattr(info, field), session=session)
 
 class CV(Base):
     __tablename__ = 'cv'
