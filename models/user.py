@@ -108,6 +108,7 @@ class UserInfo(Base):
 
     def __update_phone_number(self, new_phone_number: _.PhoneNumber, *args,
                               session: Session, **kwargs) -> None:
+        # TODO: handle error
         self.phone_number = PhoneNumber.get_or_create(session, new_phone_number)
     
     # TODO: add separate method for update
