@@ -1,6 +1,7 @@
 from typing import Any, Iterable
 
 from formatters.base import *
+from models.auxillary.phone_number import CreatePhoneNumberError, CreatePhoneNumberErrorCode
 
 from models.user import (
     CreateUserError, CreateUserErrorCode,
@@ -8,7 +9,7 @@ from models.user import (
 )
 
 type PydanticError = dict[str, Any]
-type Result = dict[str, int | list[dict[str, int | str]]]
+type Result = dict[str, int | dict[str, Result] | list[dict[str, Result]]]
 
 class User:
     serializer_email_errors = {
@@ -122,6 +123,52 @@ class Date:
         for error in raw_errors:
             cls.add_error(error, errors, root)
         return errors
+
+class PhoneNumber:
+    serializer_phone_sub_number_errors = {
+        'missing': (FieldErrorCode.MISSING, 'Missing required field'),
+        'string_type': (FieldErrorCode.WRONG_TYPE, 'Phone number must be string'),
+        'string_too_long': (FieldErrorCode.TOO_LONG, 'Length of phone number must be lower than 12 characters'),
+    }
+
+    serializer_country_id_errors = {
+        'missing' : (FieldErrorCode.MISSING, 'Missing required field'),
+        'int_type': (FieldErrorCode.WRONG_TYPE, 'Country id must be an int'),
+        'greater_than_equal': (FieldErrorCode.NOT_IN_RANGE, 'Country id must be greater or equal than 1'),
+    }
+
+    @classmethod
+    def add_error(cls, error: PydanticError, errors: Result, root: int = 0) -> None:
+        match error['loc'][root + 1]:
+            case 'country_id':
+                e = cls.serializer_country_id_errors[error['type']]
+                errors['country_id'] = [{ 'type': e[0], 'message': e[1] }]
+            case 'sub_number':
+                e = cls.serializer_phone_sub_number_errors[error['type']]
+                errors['sub_number'] = [{ 'type': e[0], 'message': e[1] }]
+
+    @classmethod
+    def format_serializer_errors(cls, raw_errors: Iterable[PydanticError],
+                                 root: int = 0) -> Result:
+        errors: Result = { 'stage': 0 } if root == 0 else {}
+        for error in raw_errors:
+            cls.add_error(error, errors)
+        return errors
+
+    @classmethod
+    def format_db_error(cls, raw_errors: CreatePhoneNumberError) -> Result:
+        match raw_errors.error_code:
+            case CreatePhoneNumberErrorCode.INVALID_COUNTRY_ID:
+                return {
+                    'stage': 1,
+                    'phone_number': [
+                        {
+                            'type': CreatePhoneNumberErrorCode.INVALID_COUNTRY_ID,
+                            'message': 'Country with provided id doesn\'t exist'
+                        }
+                    ]
+                }
+
 
 class UserInfo:
     serializer_user_id_errors = {
