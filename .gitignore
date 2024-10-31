@@ -1,5 +1,6 @@
 venv
 __pycache__
+.idea
 logs
 dbconfig.py
 # testing.py
