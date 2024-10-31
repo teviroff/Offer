@@ -157,6 +157,7 @@ class PhoneNumber:
 
     @classmethod
     def format_db_error(cls, raw_errors: CreatePhoneNumberError) -> Result:
+        #TODO: finish
         match raw_errors.error_code:
             case CreatePhoneNumberErrorCode.INVALID_COUNTRY_ID:
                 return {
