@@ -1,17 +1,13 @@
 from typing import Self
 from datetime import datetime
-from enum import IntEnum
-from dataclasses import dataclass
 
 from sqlalchemy import String, ForeignKey
-from sqlalchemy.orm import (
-    Session, Mapped, mapped_column, relationship, object_session
-)
+from sqlalchemy.orm import Session, Mapped, mapped_column, relationship
 
+from utils import *
 from models.base import Base, FileURI, file_uri
-from models.auxillary.address import Address
+from models.auxillary.address import City
 from models.auxillary.phone_number import PhoneNumber
-import models.dataclasses as _
 import serializers.user as serializers
 
 import logging
@@ -20,11 +16,6 @@ logger = logging.getLogger('database')
 
 class CreateUserErrorCode(IntEnum):
     NON_UNIQUE_EMAIL = 0
-
-@dataclass
-class CreateUserError:
-    error_code: CreateUserErrorCode
-    error_message: str
 
 class User(Base):
     __tablename__ = 'user'
@@ -45,12 +36,13 @@ class User(Base):
         return sha256(password.encode()).hexdigest()
 
     @classmethod
-    def create(cls, session: Session, fields: serializers.UserCredentials) -> Self | CreateUserError:
+    def create(cls, session: Session, fields: serializers.UserCredentials) \
+            -> Self | GenericError[CreateUserErrorCode]:
         user = session.query(User).filter(User.email == fields.email).first()
         if user is not None:
             logger.debug('\'User.create\' exited with \'NON_UNIQUE_EMAIL\' '
                          'error (email=\'%s\')', fields.email)
-            return CreateUserError(
+            return GenericError(
                 error_code=CreateUserErrorCode.NON_UNIQUE_EMAIL,
                 error_message='User with given email already exists',
             )
@@ -63,11 +55,6 @@ class User(Base):
 class UpdateUserInfoErrorCode(IntEnum):
     INVALID_USER_ID = 0
 
-@dataclass
-class UpdateUserInfoError:
-    error_code: UpdateUserInfoErrorCode
-    error_message: str
-
 class UserInfo(Base):
     __tablename__ = 'user_info'
 
@@ -76,14 +63,14 @@ class UserInfo(Base):
     name: Mapped[str] = mapped_column(String(30), nullable=True)
     surname: Mapped[str] = mapped_column(String(40), nullable=True)
     birthday: Mapped[datetime] = mapped_column(nullable=True)
-    address_id: Mapped[int] = \
-        mapped_column(ForeignKey('address.id'), nullable=True)
+    city_id: Mapped[int] = \
+        mapped_column(ForeignKey('city.id'), nullable=True)
     phone_number_id: Mapped[int | None] = \
         mapped_column(ForeignKey('phone_number.id'), unique=True, nullable=True)
     avatar: Mapped[file_uri] = mapped_column(FileURI, nullable=True)
 
     user: Mapped['User'] = relationship(back_populates='user_info')
-    address: Mapped['Address | None'] = relationship()
+    address: Mapped['City | None'] = relationship()
     phone_number: Mapped['PhoneNumber | None'] = relationship()
     cvs: Mapped[list['CV']] = \
         relationship(back_populates='user_info', cascade='all, delete-orphan')
@@ -98,17 +85,23 @@ class UserInfo(Base):
     def __update_surname(self, new_surname: str, *args, **kwargs) -> None:
         self.surname = new_surname
 
-    def __update_birthday(self, new_birthday: _.Date, *args, **kwargs) -> None:
+    def __update_birthday(self, new_birthday: serializers.Date, *args, **kwargs) -> None:
         self.birthday = datetime(new_birthday.year, new_birthday.month,
                                  new_birthday.day)
 
-    def __update_address(self, new_address: _.Address, *args,
-                         session: Session, **kwargs) -> None:
-        self.address = Address.get_or_create(session, new_address)
+    def __update_city(self, city_id: int, *args, **kwargs) -> None:
+        self.city_id = city_id
 
-    def __update_phone_number(self, new_phone_number: _.PhoneNumber, *args,
-                              session: Session, **kwargs) -> None:
-        self.phone_number = PhoneNumber.get_or_create(session, new_phone_number)
+    def __update_phone_number(
+            self, new_phone_number: serializers.PhoneNumber, *args,
+            session: Session, **kwargs
+        ) -> None | GenericError[UpdateUserInfoErrorCode]:
+        phone_number_or_error = \
+            PhoneNumber.get_or_create(session, new_phone_number)
+        if isinstance(phone_number_or_error, PhoneNumber):
+            self.phone_number = phone_number_or_error
+            return None
+        return phone_number_or_error
     
     # TODO: add separate method for update
     def __update_avatar(self, new_avatar: file_uri, *args, **kwargs) -> None:
@@ -118,24 +111,32 @@ class UserInfo(Base):
         ('name', __update_name),
         ('surname', __update_surname),
         ('birthday', __update_birthday),
-        ('address', __update_address),
+        ('city_id', __update_city),
         ('phone_number', __update_phone_number),
     )
 
     @classmethod
-    def update(cls, session: Session, info: serializers.UserInfo) -> None | UpdateUserInfoError:
+    def update(cls, session: Session, info: serializers.UserInfo) \
+            -> None | GenericError[UpdateUserInfoErrorCode]:
         user: User | None = session.query(User).get(info.user_id)
         if user is None:
             logger.debug('\'UserInfo.update\' exited with \'INVALID_USER_ID\' '
                          'error (user_id=%i)', info.user_id)
-            return UpdateUserInfoError(
+            return GenericError(
                 error_code=UpdateUserInfoErrorCode.INVALID_USER_ID,
                 error_message='User with provided id doesn\'t exist'
             )
         for field, handler in UserInfo.__field_handlers:
             if getattr(info, field) is None:
                 continue
-            handler(user.user_info, getattr(info, field), session=session)
+            error_or_none = \
+                handler(user.user_info, getattr(info, field), session=session)
+            if error_or_none is not None:
+                return error_or_none
+
+    @classmethod
+    def update_avatar(cls, session: Session, ) -> None:
+        ... # TODO
 
 class CV(Base):
     __tablename__ = 'cv'

@@ -3,30 +3,44 @@ from typing import Self
 from sqlalchemy import String, ForeignKey
 from sqlalchemy.orm import Session, Mapped, mapped_column, relationship
 
+from utils import *
 from models.base import Base
-import models.dataclasses as _
+import serializers.auxillary.address as _
 
 import logging
 
 logger = logging.getLogger('database')
 
+class CreateCountryErrorCode(IntEnum):
+    NON_UNIQUE_NAME = 0
+
 class Country(Base):
     __tablename__ = 'country'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(50))
-    phone_code: Mapped[str] = mapped_column(String(3), nullable=True)
+    name: Mapped[str] = mapped_column(String(50), unique=True)
+    phone_code: Mapped[str] = mapped_column(String(3))
 
     cities: Mapped[list['City']] = relationship(back_populates='country')
 
     @classmethod
-    def get_or_create(cls, session: Session, name: str) -> Self:
-        country = session.query(Country).filter(Country.name == name).first()
-        if country is None:
-            logger.debug('Creating new \'Country\' instance (name=\'%s\')', name)
-            country = Country(name=name)
-            session.add(country)
+    def create(cls, session: Session, fields: _.Country) \
+            -> Self | GenericError[CreateCountryErrorCode]:
+        country = session.query(Country) \
+            .filter(Country.name == fields.name).first()
+        if country is not None:
+            logger.debug('\'Country.create\' exited with \'NON_UNIQUE_NAME\' '
+                         'error (name=\'%s\')', fields.name)
+            return GenericError(
+                error_code=CreateCountryErrorCode.NON_UNIQUE_NAME,
+                error_message='Country with given name already exists'
+            )
+        country = Country(name=fields.name, phone_code=fields.phone_code)
+        session.add(country)
         return country
+
+class CreateCityErrorCode(IntEnum):
+    INVALID_COUNTRY_ID = 0
 
 class City(Base):
     __tablename__ = 'city'
@@ -36,75 +50,22 @@ class City(Base):
     name: Mapped[str] = mapped_column(String(50))
 
     country: Mapped['Country'] = relationship(back_populates='cities')
-    streets: Mapped[list['Street']] = relationship(back_populates='city')
 
     @classmethod
-    def get_or_create(cls, session: Session, city_name: str,
-                      country_name: str) -> Self:
-        country = Country.get_or_create(session, country_name)
-        city = session.query(City) \
-            .filter(City.name == city_name, City.country == country).first()
-        if city is None:
-            logger.debug('Creating new \'City\' instance (name=\'%s\', '
-                         'country=\'%s\')', city_name, country.name)
-            city = City(name=city_name, country=country)
-            session.add(city)
+    def create(cls, session: Session, fields: _.City) \
+            -> Self | GenericError[CreateCityErrorCode]:
+        country: Country | None = session.query(Country).get(fields.country_id)
+        if country is None:
+            logger.debug('\'City.create\' exited with \'INVALID_COUNTRY_ID\' '
+                         'error (country_id=%i)', fields.country_id)
+            return GenericError(
+                error_code=CreateCityErrorCode.INVALID_COUNTRY_ID,
+                error_message='Country with provided if doesn\'t exist'
+            )
+        city = City(country=country, name=fields.name)
+        session.add(city)
         return city
 
     @property
     def full(self) -> str:
         return f'{self.country.name}, {self.name}'
-
-class Street(Base):
-    __tablename__ = 'street'
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    city_id: Mapped[int] = mapped_column(ForeignKey('city.id'))
-    name: Mapped[str] = mapped_column(String(50))
-
-    city: Mapped['City'] = relationship(back_populates='streets')
-    addresses: Mapped[list['Address']] = relationship(back_populates='street')
-
-    @classmethod
-    def get_or_create(cls, session: Session, street_name: str, city_name: str,
-                      country_name: str) -> Self:
-        city = City.get_or_create(session, city_name, country_name)
-        street = session.query(Street) \
-            .filter(Street.name == street_name, Street.city == city).first()
-        if street is None:
-            logger.debug('Creating new \'Street\' instance (name=\'%s\', '
-                         'city=\'%s\')', street_name, city.full)
-            street = Street(name=street_name, city=city)
-            session.add(street)
-        return street
-
-    @property
-    def full(self) -> str:
-        return f'{self.city.full}, {self.name}'
-
-class Address(Base):
-    __tablename__ = 'address'
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    street_id: Mapped[int] = mapped_column(ForeignKey('street.id'))
-    house: Mapped[int]
-
-    street: Mapped['Street'] = relationship(back_populates='addresses')
-
-    @classmethod
-    def get_or_create(cls, session: Session, address: _.Address) -> Self:
-        street = Street.get_or_create(session, address.street,
-                                      address.city, address.country)
-        addr = session.query(Address) \
-            .filter(Address.house == address.house, Address.street == street) \
-            .first()
-        if addr is None:
-            logger.debug('Creating new \'Address\' instance (house=%i, '
-                         'street=\'%s\')', address.house, street.full)
-            addr = Address(house=address.house, street=street)
-            session.add(addr)
-        return addr
-
-    @property
-    def full(self) -> str:
-        return f'{self.street.full} {self.house}'

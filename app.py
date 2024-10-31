@@ -54,6 +54,7 @@ def create_user(
     with db.Session.begin() as session:
         user_or_error = db.User.create(session, credentials)
         if not isinstance(user_or_error, db.User):
+            session.rollback()
             return JSONResponse(
                 content=errfmt.user.User.format_db_error(user_or_error),
                 status_code=422,
@@ -68,6 +69,7 @@ def update_user_info(
     with db.Session.begin() as session:
         none_or_error = db.UserInfo.update(session, info)
         if none_or_error is not None:
+            session.rollback()
             return JSONResponse(
                 content=errfmt.user.UserInfo.format_db_error(none_or_error),
                 status_code=422,
