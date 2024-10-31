@@ -4,7 +4,7 @@ import re
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
-from phone_number import *
+from serializers.auxillary.phone_number import *
 
 class UserCredentials(BaseModel):
     model_config = { 'extra': 'ignore' }
@@ -54,6 +54,5 @@ class UserInfo(BaseModel):
     name: str | None = Field(default=None, max_length=50)
     surname: str | None = Field(default=None, max_length=50)
     birthday: Date | None = Field(default=None)
-    # TODO: add Address and PhoneNumber pydantic models
     city_id: int | None = Field(default=None, ge=1)
-    phone_number: None = PhoneNumber()
+    phone_number: PhoneNumber | None = Field(default=None)

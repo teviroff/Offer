@@ -1,26 +1,16 @@
-from typing import Any
-from pydantic import BaseModel, field_validator
-from pydantic_core import PydanticCustomError
-import re
+"""Models in this module are not accessable through the API.
+   They are defined for pure convenience, when adding them by hand."""
 
-import logging
+from pydantic import BaseModel, Field
 
-logger = logging.getLogger('serializers')
+class Country(BaseModel):
+    model_config = { 'extra': 'forbid' }
 
-class Address(BaseModel):
-    country: str
-    city: str
-    street: str
-    house: int
+    name: str = Field(min_length=1, max_length=50)
+    phone_code: int = Field(ge=1, lt=1000)
 
-    @field_validator('country', mode='before')
-    @classmethod
-    def validate_country(cls, country: Any) -> str:
-        if not isinstance(country, str):
-            # log
-            raise PydanticCustomError(
-                'field_type_error',
-                'Value of \'country\' field must be a string'
-            )
-        # ...
-        
+class City(BaseModel):
+    model_config = { 'extra': 'forbid' }
+
+    country_id: int = Field(ge=1, strict=True)
+    name: str = Field(min_length=1, max_length=50)
