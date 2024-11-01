@@ -7,6 +7,7 @@ from sqlalchemy.orm import (
     Session, Mapped, mapped_column, relationship, object_session
 )
 
+from utils import *
 from models.base import Base, FileURI, file_uri
 from models.auxillary.address import City
 from models.opportunity import response
@@ -19,28 +20,12 @@ logger = logging.getLogger('database')
 class CreateOpportunityErrorCode(IntEnum):
     INVALID_PROVIDER_ID = 0
 
-@dataclass
-class CreateOpportunityError:
-    error_code: CreateOpportunityErrorCode
-    error_message: str
-
 class FilterOpportunityErrorCode(IntEnum):
     INVALID_TAG_ID = 0
     INVALID_GEO_TAG_ID = 1
 
-@dataclass
-class FilterOpportunityError:
-    error_code: FilterOpportunityErrorCode
-    error_message: str
-
 class AddOpportunityTagErrorCode(IntEnum):
-    NO_ACTIVE_SESSION = 0
-    INVALID_TAG_ID = 1
-
-@dataclass
-class AddOpportunityTagError:
-    error_code: AddOpportunityTagErrorCode
-    error_message: str
+    INVALID_TAG_ID = 0
 
 class Opportunity(Base):
     __tablename__ = 'opportunity'
@@ -67,13 +52,14 @@ class Opportunity(Base):
         relationship(back_populates='opportunity')
 
     @classmethod
-    def create(cls, session: Session, fields: _.Opportunity) -> Self | CreateOpportunityError:
+    def create(cls, session: Session, fields: _.Opportunity) \
+            -> Self | GenericError[CreateOpportunityErrorCode]:
         provider: OpportunityProvider | None = \
             session.query(OpportunityProvider).get(fields.provider_id)
         if provider is None:
             logger.debug('\'Opportunity.create\' exited with \'INVALID_PROVIDER_ID\' '
                          'error (id=%i)', fields.provider_id)
-            return CreateOpportunityError(
+            return GenericError(
                 error_code=CreateOpportunityErrorCode.INVALID_PROVIDER_ID,
                 error_message='Opportunity provider with given id doesn\'t exist',
             )
@@ -87,43 +73,30 @@ class Opportunity(Base):
         return opportunity
 
     @classmethod
-    def filter(cls, session: Session, request: _.SearchRequest) -> list[Self] | FilterOpportunityError:
-        ...  # TODO: idk how to filter M2M
+    def filter(cls, session: Session, request: _.SearchRequest) \
+            -> list[Self] | GenericError[FilterOpportunityErrorCode]:
+        ...  # TODO
 
-    def add_tag(self, tag_id: int) -> None | AddOpportunityTagError:
-        session = object_session(self)
-        if session is None:
-            logger.debug('\'Opportunity.add_tag\' exited with \'NO_ACTIVE_SESSION\' '
-                         'error (id=%i, tag_id=%i)', self.id, tag_id)
-            return AddOpportunityTagError(
-                error_code=AddOpportunityTagErrorCode.NO_ACTIVE_SESSION,
-                error_message='No active session found for this \'Opportunity\'',
-            )
+    def add_tag(self, session: Session, tag_id: int) \
+            -> None | GenericError[AddOpportunityTagErrorCode]:
         tag: OpportunityTag | None = session.query(OpportunityTag).get(tag_id)
         if tag is None:
             logger.debug('\'Opportunity.add_tag\' exited with \'INVALID_TAG_ID\' '
                          'error (id=%i, tag_id=%i)', self.id, tag_id)
-            return AddOpportunityTagError(
+            return GenericError(
                 error_code=AddOpportunityTagErrorCode.INVALID_TAG_ID,
                 error_message='Opportunity tag with given id doesn\'t exist',
             )
         self.tags.append(tag)
     
-    def add_geo_tag(self, geo_tag_id: int) -> None | AddOpportunityTagError:
-        session = object_session(self)
-        if session is None:
-            logger.debug('\'Opportunity.add_geo_tag\' exited with \'NO_ACTIVE_SESSION\' '
-                         'error (id=%i, geo_tag_id=%i)', self.id, geo_tag_id)
-            return AddOpportunityTagError(
-                error_code=AddOpportunityTagErrorCode.NO_ACTIVE_SESSION,
-                error_message='No active session found for this \'Opportunity\'',
-            )
+    def add_geo_tag(self, session: Session, geo_tag_id: int) \
+            -> None | GenericError[AddOpportunityTagErrorCode]:
         geo_tag: OpportunityGeoTag | None = \
             session.query(OpportunityGeoTag).get(geo_tag_id)
         if geo_tag is None:
             logger.debug('\'Opportunity.add_geo_tag\' exited with \'INVALID_TAG_ID\' '
                          'error (id=%i, geo_tag_id=%i)', self.id, geo_tag_id)
-            return AddOpportunityTagError(
+            return GenericError(
                 error_code=AddOpportunityTagErrorCode.INVALID_TAG_ID,
                 error_message='Opportunity geo tag with given id doesn\'t exist',
             )
@@ -151,11 +124,6 @@ class OpportunityProvider(Base):
 class CreateOpportunityTagErrorCode(IntEnum):
     NON_UNIQUE_NAME = 0
 
-@dataclass
-class CreateOpportunityTagError:
-    error_code: CreateOpportunityTagErrorCode
-    error_message: str
-
 class OpportunityTag(Base):
     __tablename__ = 'opportunity_tag'
 
@@ -166,13 +134,14 @@ class OpportunityTag(Base):
         relationship(secondary='opportunity_to_tag', back_populates='tags')
 
     @classmethod
-    def create(cls, session: Session, fields: _.OpportunityTag) -> Self | CreateOpportunityTagError:
+    def create(cls, session: Session, fields: _.OpportunityTag) \
+            -> Self | GenericError[CreateOpportunityTagErrorCode]:
         tag = session.query(OpportunityTag) \
             .filter(OpportunityTag.name == fields.name).first()
         if tag is not None:
             logger.debug('\'OpportunityTag.create\' exited with \'NON_UNIQUE_NAME\' '
                          'error (name=\'%s\')', fields.name)
-            return CreateOpportunityTagError(
+            return GenericError(
                 error_code=CreateOpportunityTagErrorCode.NON_UNIQUE_NAME,
                 error_message='Tag with given name already exists',
             )
@@ -183,11 +152,6 @@ class OpportunityTag(Base):
 class CreateOpportunityGeoTagErrorCode(IntEnum):
     INVALID_CITY_ID = 0
     NON_UNIQUE_CITY = 1
-
-@dataclass
-class CreateOpportunityGeoTagError:
-    error_code: CreateOpportunityGeoTagErrorCode
-    error_message: str
 
 class OpportunityGeoTag(Base):
     __tablename__ = 'opportunity_geo_tag'
@@ -201,12 +165,13 @@ class OpportunityGeoTag(Base):
                      back_populates='geo_tags')
 
     @classmethod
-    def create(cls, session: Session, city_id: int) -> Self | CreateOpportunityGeoTagError:
+    def create(cls, session: Session, city_id: int) \
+            -> Self | GenericError[CreateOpportunityGeoTagErrorCode]:
         city: City | None = session.query(City).get(city_id)
         if city is None:
             logger.debug('\'OpportunityGeoTag.create\' exited with '
                          '\'INVALID_CITY_ID\' error (id=%i)', city_id)
-            return CreateOpportunityGeoTagError(
+            return GenericError(
                 error_code=CreateOpportunityGeoTagErrorCode.INVALID_CITY_ID,
                 error_message='City with given id doesn\'t exist',
             )
@@ -215,7 +180,7 @@ class OpportunityGeoTag(Base):
         if geo_tag is not None:
             logger.debug('\'OpportunityGeoTag.create\' exited with '
                          '\'NON_UNIQUE_CITY\' error (city_id=%i)', city_id)
-            return CreateOpportunityGeoTagError(
+            return GenericError(
                 error_code=CreateOpportunityGeoTagErrorCode.NON_UNIQUE_CITY,
                 error_message='Geo tag with given city_id already exist',
             )
@@ -239,16 +204,32 @@ class OpportunityToGeoTag(Base):
     geo_tag_id: Mapped[int] = \
         mapped_column(ForeignKey('opportunity_geo_tag.id'), primary_key=True)
 
+class CreateOpportunityCardErrorCode(IntEnum):
+    INVALID_OPPORTUNITY_ID = 0
+
 class OpportunityCard(Base):
     __tablename__ = 'opportunity_card'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     opportunity_id: Mapped[int] = mapped_column(ForeignKey('opportunity.id'))
-
-    # TODO: end up on a concrete design and add corresponding columns
+    title: Mapped[str] = mapped_column(String(30))
+    sub_title: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
     opportunity: Mapped['Opportunity'] = relationship(back_populates='cards')
 
     @classmethod
     def create(cls, session: Session, fields: _.OpportunityCard) -> Self:
-        ...  # TODO
+        opportunity: Opportunity | None = \
+            session.query(Opportunity).get(fields.opportunity_id)
+        if opportunity is None:
+            logger.debug('\'OpportunityCard.create\' exited with '
+                         '\'INVALID_OPPORTUNITY_ID\' error (opportunity_id=%i)',
+                         fields.opportunity_id)
+            return GenericError(
+                error_code=CreateOpportunityCardErrorCode.INVALID_OPPORTUNITY_ID,
+                error_message='Opportunity with given id doesn\'t exist',
+            )
+        card = OpportunityCard(opportunity=opportunity, title=fields.title,
+                               sub_title=fields.sub_title)
+        session.add(card)
+        return card

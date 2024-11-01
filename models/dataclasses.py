@@ -96,7 +96,8 @@ class OpportunityTag:
 @dataclass
 class OpportunityCard:
     opportunity_id: int
-    ...  # TODO: figure out design
+    title: str
+    sub_title: str | None
 
     @classmethod
     def from_dict(cls, fields: dict[str, Any]) -> Self | None:
@@ -106,7 +107,7 @@ class OpportunityCard:
 class OpportunityResponse:
     user_id: int
     opportunity_id: int
-    ...  # TODO: figure out NoSQL
+    data: file_uri
 
     @classmethod
     def from_dict(cls, fields: dict[str, Any]) -> Self | None:

@@ -1,5 +1,3 @@
-from typing import NewType
-
 from sqlalchemy import String
 from sqlalchemy.orm import DeclarativeBase
 
