@@ -10,10 +10,7 @@ from models.opportunity.opportunity import (
     CreateOpportunityGeoTagError, CreateOpportunityErrorCode
 )
 
-type PydanticError = dict[str, Any]
-type Result = dict[str, int | dict[str, Result] | list[dict[str, Result]]]
-
-class Opportunity:
+class Opportunity(BaseFormatter):
     serializer_name_errors = {
         'missing': (FieldErrorCode.MISSING, 'Missing required field'),
         'string_type': (FieldErrorCode.WRONG_TYPE, 'Name of opportunity must be string'),
@@ -51,24 +48,16 @@ class Opportunity:
                 errors['required_data'] = [{'type': e[0], 'message': e[1]}]
 
     @classmethod
-    def format_serializer_errors(cls, raw_errors: Iterable[PydanticError],
-                                 root: int = 0) -> Result:
-        errors: Result = {'stage': 0} if root == 0 else {}
-        for error in raw_errors:
-            cls.add_error(error, errors)
-        return errors
-
-    @classmethod
-    def format_db_error(cls, raw_errors: GenericError[CreateOpportunityErrorCode]) -> Result:
+    def format_db_error(cls, raw_error: GenericError[CreateOpportunityErrorCode]) -> Result:
         # TODO: finish
-        match raw_errors.error_code:
-            case CreateOpportunityErrorCode:
+        match raw_error.error_code:
+            case CreateOpportunityErrorCode.INVALID_PROVIDER_ID:
                 return {
                     'stage': 1,
-                    'opportunity': [
+                    'provider': [
                         {
-                            'type': CreatePhoneNumberErrorCode.INVALID_COUNTRY_ID,
-                            'message': 'Country with provided id doesn\'t exist'
+                            'type': CreateOpportunityErrorCode.INVALID_PROVIDER_ID,
+                            'message': 'Provider with provided id doesn\'t exist'
                         }
                     ]
                 }

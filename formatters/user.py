@@ -1,11 +1,11 @@
 from typing import Any, Iterable
 
 from formatters.base import *
-from models.auxillary.phone_number import CreatePhoneNumberError, CreatePhoneNumberErrorCode
+from models.auxillary.phone_number import CreatePhoneNumberErrorCode
 
 from models.user import (
-    CreateUserError, CreateUserErrorCode,
-    UpdateUserInfoError, UpdateUserInfoErrorCode,
+    CreateUserErrorCode,
+    UpdateUserInfoErrorCode,
 )
 
 type PydanticError = dict[str, Any]
