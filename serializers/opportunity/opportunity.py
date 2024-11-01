@@ -1,9 +1,7 @@
-from dataclasses import Field
 from email.policy import strict, default
 from typing import Any
 
-from attr.validators import max_len
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
 import re
 
