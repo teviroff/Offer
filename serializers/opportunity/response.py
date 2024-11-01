@@ -1,14 +1,8 @@
 from datetime import datetime
-from email.policy import strict, default
-from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
-from pydantic_core import PydanticCustomError
-import re
+from pydantic import BaseModel, Field
 
 import logging
-
-from models.base import file_uri, FileURI
 
 logger = logging.getLogger('serializers')
 
@@ -19,3 +13,8 @@ class ResponseStatus(BaseModel):
     status: str = Field(max_length=50)
     description: str = Field(max_length=200)
     timestamp: datetime = Field(default_factory=datetime.now)
+
+class OpportunityResponse(BaseModel):
+    user_id: int = Field(ge=1, strict=True)
+    opportunity_id: int = Field(ge=1, strict=True)
+    # TODO: data

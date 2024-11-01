@@ -5,10 +5,10 @@ from sqlalchemy import String, ForeignKey
 from sqlalchemy.orm import Session, Mapped, mapped_column, relationship
 
 from utils import *
-from models.base import Base, FileURI, file_uri
+from models.base import Base
 from models.opportunity import opportunity as _opportunity
 from models import user as _user
-from models import dataclasses as _
+import serializers.opportunity.response as serializers 
 
 import logging
 
@@ -43,7 +43,7 @@ class ResponseStatus(Base):
         return status
 
     @classmethod
-    def create(cls, session: Session, fields: _.ResponseStatus) \
+    def create(cls, session: Session, fields: serializers.ResponseStatus) \
             -> Self | GenericError[CreateResponseStatusErrorCode]:
         response: OpportunityResponse | None = \
             session.query(OpportunityResponse).get(fields.response_id)
@@ -59,7 +59,7 @@ class ResponseStatus(Base):
             response=response,
             status=fields.status,
             description=fields.description,
-            timestamp=datetime.now(),
+            timestamp=fields.timestamp,
         )
         session.add(status)
         return status
@@ -74,7 +74,7 @@ class OpportunityResponse(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
     opportunity_id: Mapped[int] = mapped_column(ForeignKey('opportunity.id'))
-    data: Mapped[file_uri] = mapped_column(FileURI)  # see opportunity.py:15
+    # data: Mapped[file_uri] = mapped_column(FileURI)  # see opportunity.py:15
 
     user: Mapped['_user.User'] = relationship(back_populates='responses')
     opportunity: Mapped['_opportunity.Opportunity'] = \
@@ -83,7 +83,7 @@ class OpportunityResponse(Base):
         relationship(back_populates='response')
 
     @classmethod
-    def create(cls, session: Session, fields: _.OpportunityResponse) \
+    def create(cls, session: Session, fields: serializers.OpportunityResponse) \
             -> Self | GenericError[CreateOpportunityResponseErrorCode]:
         user: _user.User | None = session.query(_user.User).get(fields.user_id)
         if user is None:
@@ -107,7 +107,7 @@ class OpportunityResponse(Base):
         response = OpportunityResponse(
             user=user,
             opportunity=opportunity,
-            data=fields.data,
+            # data=fields.data,
         )
         session.add(response)
         ResponseStatus.create_initial(session, response)

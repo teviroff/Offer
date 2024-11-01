@@ -1,17 +1,13 @@
 from typing import Self
-from enum import IntEnum
-from dataclasses import dataclass
 
 from sqlalchemy import String, ForeignKey
-from sqlalchemy.orm import (
-    Session, Mapped, mapped_column, relationship, object_session
-)
+from sqlalchemy.orm import Session, Mapped, mapped_column, relationship
 
 from utils import *
 from models.base import Base, FileURI, file_uri
 from models.auxillary.address import City
 from models.opportunity import response
-import models.dataclasses as _
+import serializers.opportunity.opportunity as serializers
 
 import logging
 
@@ -34,9 +30,8 @@ class Opportunity(Base):
     name: Mapped[str] = mapped_column(String(50))
     provider_id: Mapped[int] = \
         mapped_column(ForeignKey('opportunity_provider.id'))
-    description: Mapped[file_uri] = mapped_column(FileURI)
-    # might change to uri into NoSQL db
-    required_data: Mapped[file_uri] = mapped_column(FileURI)
+    description: Mapped[str] = mapped_column(String(250))
+    # TODO: required_data: Mapped[file_uri] = mapped_column(FileURI)
 
     provider: Mapped['OpportunityProvider'] = \
         relationship(back_populates='opportunities')
@@ -52,7 +47,7 @@ class Opportunity(Base):
         relationship(back_populates='opportunity')
 
     @classmethod
-    def create(cls, session: Session, fields: _.Opportunity) \
+    def create(cls, session: Session, fields: serializers.Opportunity) \
             -> Self | GenericError[CreateOpportunityErrorCode]:
         provider: OpportunityProvider | None = \
             session.query(OpportunityProvider).get(fields.provider_id)
@@ -67,15 +62,16 @@ class Opportunity(Base):
             name=fields.name,
             provider=provider,
             description=fields.description,
-            required_data=fields.required_data,
+            # required_data=fields.required_data,
         )
         session.add(opportunity)
         return opportunity
 
-    @classmethod
-    def filter(cls, session: Session, request: _.SearchRequest) \
-            -> list[Self] | GenericError[FilterOpportunityErrorCode]:
-        ...  # TODO
+    # TODO
+    # @classmethod
+    # def filter(cls, session: Session, request: _.SearchRequest) \
+    #         -> list[Self] | GenericError[FilterOpportunityErrorCode]:
+    #     ...
 
     def add_tag(self, session: Session, tag_id: int) \
             -> None | GenericError[AddOpportunityTagErrorCode]:
@@ -107,14 +103,15 @@ class OpportunityProvider(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(50))
-    logo: Mapped[file_uri] = mapped_column(FileURI, nullable=True)
+    logo: Mapped[file_uri | None] = mapped_column(FileURI, nullable=True)
 
     opportunities: Mapped[list['Opportunity']] = \
         relationship(back_populates='provider')
 
     @classmethod
-    def create(cls, session: Session, fields: _.OpportunityProvider) -> Self:
-        provider = OpportunityProvider(name=fields.name, logo=fields.logo)
+    def create(cls, session: Session, fields: serializers.OpportunityProvider) \
+            -> Self:
+        provider = OpportunityProvider(name=fields.name)
         session.add(provider)
         return provider
 
@@ -134,7 +131,7 @@ class OpportunityTag(Base):
         relationship(secondary='opportunity_to_tag', back_populates='tags')
 
     @classmethod
-    def create(cls, session: Session, fields: _.OpportunityTag) \
+    def create(cls, session: Session, fields: serializers.OpportunityTag) \
             -> Self | GenericError[CreateOpportunityTagErrorCode]:
         tag = session.query(OpportunityTag) \
             .filter(OpportunityTag.name == fields.name).first()
@@ -165,12 +162,12 @@ class OpportunityGeoTag(Base):
                      back_populates='geo_tags')
 
     @classmethod
-    def create(cls, session: Session, city_id: int) \
+    def create(cls, session: Session, fields: serializers.OpportunityGeoTag) \
             -> Self | GenericError[CreateOpportunityGeoTagErrorCode]:
-        city: City | None = session.query(City).get(city_id)
+        city: City | None = session.query(City).get(fields.city_id)
         if city is None:
             logger.debug('\'OpportunityGeoTag.create\' exited with '
-                         '\'INVALID_CITY_ID\' error (id=%i)', city_id)
+                         '\'INVALID_CITY_ID\' error (id=%i)', fields.city_id)
             return GenericError(
                 error_code=CreateOpportunityGeoTagErrorCode.INVALID_CITY_ID,
                 error_message='City with given id doesn\'t exist',
@@ -179,7 +176,8 @@ class OpportunityGeoTag(Base):
             .filter(OpportunityGeoTag.city == city).first()
         if geo_tag is not None:
             logger.debug('\'OpportunityGeoTag.create\' exited with '
-                         '\'NON_UNIQUE_CITY\' error (city_id=%i)', city_id)
+                         '\'NON_UNIQUE_CITY\' error (city_id=%i)',
+                         fields.city_id)
             return GenericError(
                 error_code=CreateOpportunityGeoTagErrorCode.NON_UNIQUE_CITY,
                 error_message='Geo tag with given city_id already exist',
@@ -218,7 +216,8 @@ class OpportunityCard(Base):
     opportunity: Mapped['Opportunity'] = relationship(back_populates='cards')
 
     @classmethod
-    def create(cls, session: Session, fields: _.OpportunityCard) -> Self:
+    def create(cls, session: Session, fields: serializers.OpportunityCard) \
+            -> Self:
         opportunity: Opportunity | None = \
             session.query(Opportunity).get(fields.opportunity_id)
         if opportunity is None:

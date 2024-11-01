@@ -14,9 +14,7 @@ logger = logging.getLogger('serializers')
 class OpportunityProvider(BaseModel):
     model_config = { 'extra': 'ignore' }
 
-    id: int = Field(ge=1, strict=True)
     name: str = Field(max_length=50)
-    logo: file_uri = Field(default=None)
 
 class OpportunityTag(BaseModel):
     model_config = { 'extra': 'ignore' }
@@ -32,11 +30,12 @@ class OpportunityCard(BaseModel):
     model_config = { 'extra': 'ignore' }
 
     opportunity_id: int = Field(ge=1, strict=True)
+    title: str = Field(max_length=30)
+    sub_title: str | None = Field(max_length=30)
 
 class Opportunity(BaseModel):
     model_config = { 'extra': 'ignore' }
 
-    name: str = Field(default=None, max_length=50)
+    name: str = Field(max_length=50)
     provider_id: int = Field(ge=1, strict=True)
-    description: file_uri = Field(default=None)
-    required_data: file_uri = Field(default=None)
+    description: str = Field(max_length=250)
