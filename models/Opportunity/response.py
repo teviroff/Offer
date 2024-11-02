@@ -8,7 +8,7 @@ from utils import *
 from models.base import Base
 from models.opportunity import opportunity as _opportunity
 from models import user as _user
-import serializers.opportunity.response as serializers 
+import serializers.mod as ser
 
 import logging
 
@@ -43,23 +43,23 @@ class ResponseStatus(Base):
         return status
 
     @classmethod
-    def create(cls, session: Session, fields: serializers.ResponseStatus) \
+    def create(cls, session: Session, request: ser.ResponseStatus.Create) \
             -> Self | GenericError[CreateResponseStatusErrorCode]:
         response: OpportunityResponse | None = \
-            session.query(OpportunityResponse).get(fields.response_id)
+            session.query(OpportunityResponse).get(request.response_id)
         if response is None:
             logger.debug('\'ResponseStatus.create\' exited with '
                          '\'INVALID_RESPONSE_ID\' error (id=%i)',
-                         fields.response_id)
+                         request.response_id)
             return GenericError(
                 error_code=CreateResponseStatusErrorCode.INVALID_RESPONSE_ID,
                 error_message='Opportunity response with given id doesn\'t exist',
             )
         status = ResponseStatus(
             response=response,
-            status=fields.status,
-            description=fields.description,
-            timestamp=fields.timestamp,
+            status=request.status,
+            description=request.description,
+            timestamp=request.timestamp,
         )
         session.add(status)
         return status
@@ -83,7 +83,7 @@ class OpportunityResponse(Base):
         relationship(back_populates='response')
 
     @classmethod
-    def create(cls, session: Session, fields: serializers.OpportunityResponse) \
+    def create(cls, session: Session, fields: ser.OpportunityResponse.Create) \
             -> Self | GenericError[CreateOpportunityResponseErrorCode]:
         user: _user.User | None = session.query(_user.User).get(fields.user_id)
         if user is None:

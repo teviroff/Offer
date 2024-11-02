@@ -7,7 +7,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from utils import *
 from models.base import Base
 from models.auxillary.address import Country
-import serializers.auxillary.phone_number as _
+import serializers.mod as ser
 
 import logging
 
@@ -26,7 +26,7 @@ class PhoneNumber(Base):
     country: Mapped['Country'] = relationship()
 
     @classmethod
-    def create(cls, session: Session, fields: _.PhoneNumber) \
+    def create(cls, session: Session, fields: ser.auxillary.PhoneNumber) \
             -> Self | GenericError[CreatePhoneNumberErrorCode]:
         country: Country | None = \
             session.query(Country).get(fields.country_id)
@@ -45,7 +45,7 @@ class PhoneNumber(Base):
         return phone_number
 
     @classmethod
-    def get_or_create(cls, session: Session, fields: _.PhoneNumber) \
+    def get_or_create(cls, session: Session, fields: ser.auxillary.PhoneNumber) \
             -> Self | GenericError[CreatePhoneNumberErrorCode]:
         phone_number = session.query(PhoneNumber) \
             .filter(PhoneNumber.country_id == fields.country_id,

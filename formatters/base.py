@@ -1,8 +1,7 @@
 from enum import IntEnum
-from typing import Any
+from typing import Any, Callable
 from collections.abc import Iterable
 from abc import ABC, abstractmethod
-
 
 class FieldErrorCode(IntEnum):
     MISSING = 100
@@ -15,16 +14,28 @@ class FieldErrorCode(IntEnum):
 type PydanticError = dict[str, Any]
 type Result = dict[str, int | dict[str, Result] | list[dict[str, Result]]]
 
-class BaseFormatter(ABC):
+class BaseSerializerFormatter(ABC):
+    @classmethod
+    def append_serializer_field_error(
+        cls, error: PydanticError, errors: Result, *,
+        field_name: str, matcher: Callable[[str], tuple[int, str] | None]
+    ) -> None:
+        e = matcher(error['type'])
+        if e is None:
+            raise ValueError(f'Unhandled serialization error {error["type"]}')
+        if field_name not in errors:
+            errors[field_name] = []
+        errors[field_name].append({ 'type': e[0], 'message': e[1] })
+
     @classmethod
     @abstractmethod
-    def add_error(cls, error: PydanticError, errors: Result, root: int = 0) -> None:
-        ...
+    def append_serializer_error(cls, error: PydanticError, errors: Result,
+                                root: int = 0) -> None: ...
 
     @classmethod
     def format_serializer_errors(cls, raw_errors: Iterable[PydanticError],
                                  root: int = 0) -> Result:
-        errors: Result = {'stage': 0} if root == 0 else {}
+        errors: Result = {}
         for error in raw_errors:
-            cls.add_error(error, errors)
+            cls.append_serializer_error(error, errors)
         return errors

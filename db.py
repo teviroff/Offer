@@ -2,7 +2,7 @@ from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import sessionmaker
 
 from models.base import Base
-from models.auxillary.address import Country, City, Street, Address
+from models.auxillary.address import Country, City
 from models.auxillary.phone_number import PhoneNumber
 from models.user import User, UserInfo, CV
 from models.opportunity.opportunity import (

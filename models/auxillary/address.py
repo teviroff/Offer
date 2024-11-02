@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, Mapped, mapped_column, relationship
 
 from utils import *
 from models.base import Base
-import serializers.auxillary.address as _
+import serializers.mod as ser
 
 import logging
 
@@ -24,7 +24,7 @@ class Country(Base):
     cities: Mapped[list['City']] = relationship(back_populates='country')
 
     @classmethod
-    def create(cls, session: Session, fields: _.Country) \
+    def create(cls, session: Session, fields: ser.auxillary.Country) \
             -> Self | GenericError[CreateCountryErrorCode]:
         country = session.query(Country) \
             .filter(Country.name == fields.name).first()
@@ -52,7 +52,7 @@ class City(Base):
     country: Mapped['Country'] = relationship(back_populates='cities')
 
     @classmethod
-    def create(cls, session: Session, fields: _.City) \
+    def create(cls, session: Session, fields: ser.auxillary.City) \
             -> Self | GenericError[CreateCityErrorCode]:
         country: Country | None = session.query(Country).get(fields.country_id)
         if country is None:

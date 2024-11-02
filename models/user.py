@@ -8,7 +8,7 @@ from utils import *
 from models.base import Base, FileURI, file_uri
 from models.auxillary.address import City
 from models.auxillary.phone_number import PhoneNumber
-import serializers.user as serializers
+import serializers.mod as ser
 
 import logging
 
@@ -36,18 +36,18 @@ class User(Base):
         return sha256(password.encode()).hexdigest()
 
     @classmethod
-    def create(cls, session: Session, fields: serializers.UserCredentials) \
+    def create(cls, session: Session, request: ser.User.Create) \
             -> Self | GenericError[CreateUserErrorCode]:
-        user = session.query(User).filter(User.email == fields.email).first()
+        user = session.query(User).filter(User.email == request.email).first()
         if user is not None:
             logger.debug('\'User.create\' exited with \'NON_UNIQUE_EMAIL\' '
-                         'error (email=\'%s\')', fields.email)
+                         'error (email=\'%s\')', request.email)
             return GenericError(
                 error_code=CreateUserErrorCode.NON_UNIQUE_EMAIL,
                 error_message='User with given email already exists',
             )
-        user = User(email=fields.email,
-                    password_hash=cls.hash_password(fields.password))
+        user = User(email=request.email,
+                    password_hash=cls.hash_password(request.password))
         user.user_info = UserInfo(user=user)
         session.add(user)
         return user
@@ -85,17 +85,18 @@ class UserInfo(Base):
     def __update_surname(self, new_surname: str, *args, **kwargs) -> None:
         self.surname = new_surname
 
-    def __update_birthday(self, new_birthday: serializers.Date, *args, **kwargs) -> None:
-        self.birthday = datetime(new_birthday.year, new_birthday.month,
-                                 new_birthday.day)
+    def __update_birthday(self, new_birthday: ser.auxillary.Date,
+                          *args, **kwargs) -> None:
+        self.birthday = \
+            datetime(new_birthday.year, new_birthday.month, new_birthday.day)
 
     def __update_city(self, city_id: int, *args, **kwargs) -> None:
         self.city_id = city_id
 
     def __update_phone_number(
-            self, new_phone_number: serializers.PhoneNumber, *args,
-            session: Session, **kwargs
-        ) -> None | GenericError[UpdateUserInfoErrorCode]:
+        self, new_phone_number: ser.auxillary.PhoneNumber, *args,
+        session: Session, **kwargs
+    ) -> None | GenericError[UpdateUserInfoErrorCode]:
         phone_number_or_error = \
             PhoneNumber.get_or_create(session, new_phone_number)
         if isinstance(phone_number_or_error, PhoneNumber):
@@ -116,27 +117,29 @@ class UserInfo(Base):
     )
 
     @classmethod
-    def update(cls, session: Session, info: serializers.UserInfo) \
+    def update(cls, session: Session, request: ser.UserInfo.Update) \
             -> None | GenericError[UpdateUserInfoErrorCode]:
-        user: User | None = session.query(User).get(info.user_id)
+        user: User | None = session.query(User).get(request.user_id)
         if user is None:
             logger.debug('\'UserInfo.update\' exited with \'INVALID_USER_ID\' '
-                         'error (user_id=%i)', info.user_id)
+                         'error (user_id=%i)', request.user_id)
             return GenericError(
                 error_code=UpdateUserInfoErrorCode.INVALID_USER_ID,
                 error_message='User with provided id doesn\'t exist'
             )
         for field, handler in UserInfo.__field_handlers:
-            if getattr(info, field) is None:
+            if getattr(request, field) is None:
                 continue
-            error_or_none = \
-                handler(user.user_info, getattr(info, field), session=session)
+            error_or_none = handler(user.user_info, getattr(request, field),
+                                    session=session)
             if error_or_none is not None:
                 return error_or_none
 
+    # TODO
     @classmethod
-    def update_avatar(cls, session: Session, ) -> None:
-        ... # TODO
+    def update_avatar(cls, session: Session, request: ser.UserInfo.UpdateAvatar) \
+            -> None:
+        ...
 
 class CV(Base):
     __tablename__ = 'cv'
@@ -146,6 +149,16 @@ class CV(Base):
     file: Mapped[file_uri] = mapped_column(FileURI)
 
     user_info: Mapped['UserInfo'] = relationship(back_populates='cvs')
+
+    # TODO
+    @classmethod
+    def create(cls, session: Session, request: ser.CV.Create) -> None:
+        ...
+
+    # TODO
+    @classmethod
+    def delete(cls, session: Session, request: ser.CV.Delete) -> None:
+        ...
 
 # magic fix, placing it in the beggining of a file results in error on line 19
 from models.opportunity import response
