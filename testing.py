@@ -12,8 +12,7 @@ logging.basicConfig(
     level=logging.DEBUG
 )
 
-from db import *
-import models.dataclasses as _
+from string import ascii_letters
+from random import choices
 
-with Session.begin() as session:
-    ...
+print(f'dev-{''.join(choices(ascii_letters + '0123456789', k=64))}')

@@ -1,21 +1,34 @@
-from typing import Annotated
-from pydantic import BaseModel, Field
+from serializers.base import *
+
 
 class Create(BaseModel):
-    model_config = { 'extra': 'ignore' }
+    model_config = {'extra': 'ignore'}
 
-    name: Annotated[str, Field(max_length=50)]
-    provider_id: Annotated[int, Field(ge=1, strict=True)]
+    api_key: API_KEY
+    name: Annotated[str, Field(min_length=1, max_length=50)]
+    provider_id: ID
     description: Annotated[str, Field(max_length=250)]
 
-class AddTags(BaseModel):
-    model_config = { 'extra': 'ignore' }
 
-    user_id: Annotated[int, Field(ge=1, strict=True)]
-    tag_ids: list[Annotated[int, Field(ge=1, strict=True)]]
+class Filter(BaseModel):
+    model_config = {'extra': 'ignore'}
+
+    api_key: OPTIONAL_API_KEY
+    tag_ids: list[ID]
+    geo_tag_ids: list[ID]
+
+
+class AddTags(BaseModel):
+    model_config = {'extra': 'ignore'}
+
+    api_key: API_KEY
+    opportunity_id: ID
+    tag_ids: list[ID]
+
 
 class AddGeoTags(BaseModel):
-    model_config = { 'extra': 'ignore' }
+    model_config = {'extra': 'ignore'}
 
-    user_id: Annotated[int, Field(ge=1, strict=True)]
-    geo_tag_ids: list[Annotated[int, Field(ge=1, strict=True)]]
+    api_key: API_KEY
+    opportunity_id: ID
+    geo_tag_ids: list[ID]

@@ -13,6 +13,7 @@ import logging
 
 logger = logging.getLogger('database')
 
+
 class CreatePhoneNumberErrorCode(IntEnum):
     INVALID_COUNTRY_ID = 0
 
@@ -28,11 +29,9 @@ class PhoneNumber(Base):
     @classmethod
     def create(cls, session: Session, fields: ser.auxillary.PhoneNumber) \
             -> Self | GenericError[CreatePhoneNumberErrorCode]:
-        country: Country | None = \
-            session.query(Country).get(fields.country_id)
+        country: Country | None = session.query(Country).get(fields.country_id)
         if country is None:
-            logger.debug('\'PhoneNumber.create\' exited with \'INVALID_COUNTRY_ID\' '
-                         'error (id=%i)', fields.country_id)
+            logger.debug('\'PhoneNumber.create\' exited with \'INVALID_COUNTRY_ID\' error (id=%i)', fields.country_id)
             return GenericError(
                 error_code=CreatePhoneNumberErrorCode.INVALID_COUNTRY_ID,
                 error_message='Country with provided id doesn\'t exist',
@@ -48,12 +47,10 @@ class PhoneNumber(Base):
     def get_or_create(cls, session: Session, fields: ser.auxillary.PhoneNumber) \
             -> Self | GenericError[CreatePhoneNumberErrorCode]:
         phone_number = session.query(PhoneNumber) \
-            .filter(PhoneNumber.country_id == fields.country_id,
-                    PhoneNumber.sub_number == fields.sub_number) \
+            .filter(PhoneNumber.country_id == fields.country_id, PhoneNumber.sub_number == fields.sub_number) \
             .first()
-        return phone_number if phone_number is not None \
-            else cls.create(session, fields)
+        return phone_number if phone_number is not None else cls.create(session, fields)
 
     @hybrid_property
     def full(self) -> str:
-        return f'{self.country.phone_code}{self.number}'
+        return f'{self.country.phone_code}{self.sub_number}'

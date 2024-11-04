@@ -1,21 +1,20 @@
-from typing import Annotated, Literal
-from pydantic import BaseModel, Field
-
+from serializers.base import *
 import serializers.auxillary as _
 
-class Update(BaseModel):
-    model_config = { 'extra': 'ignore' }
 
-    user_id: Annotated[int, Field(ge=1, strict=True)]
-    name: Annotated[Annotated[str, Field(max_length=50)] | None,
-                    Field(default=None)]
-    surname: Annotated[Annotated[str, Field(max_length=50)] | None,
-                       Field(default=None)]
-    birthday: Annotated[_.Date | Literal['reset'] | None, Field(default=None)]
-    city_id: Annotated[Annotated[int, Field(ge=1)] | Literal['reset'] | None,
-                       Field(default=None)]
-    phone_number: Annotated[_.PhoneNumber | Literal['reset'] | None,
-                            Field(default=None)]
+class Update(BaseModel):
+    model_config = {'extra': 'ignore'}
+
+    api_key: OPTIONAL_API_KEY
+    user_id: ID
+    name: Annotated[Annotated[str, Field(max_length=50)] | None, Field(default=None)]
+    surname: Annotated[Annotated[str, Field(max_length=50)] | None, Field(default=None)]
+    birthday: Annotated[_.Date | None, Field(default=None)]
+    city_id: Annotated[ID | None, Field(default=None)]
+
+
+class UpdatePhoneNumber(BaseModel):
+    ...
 
 class UpdateAvatar(BaseModel):
     ...

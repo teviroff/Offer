@@ -1,4 +1,4 @@
-from typing import Self
+from typing import Self, Union
 from datetime import datetime
 
 from sqlalchemy import String, ForeignKey
@@ -7,12 +7,13 @@ from sqlalchemy.orm import Session, Mapped, mapped_column, relationship
 from utils import *
 from models.base import Base, FileURI, file_uri
 from models.auxillary.address import City
-from models.auxillary.phone_number import PhoneNumber
+# from models.auxillary.phone_number import PhoneNumber
 import serializers.mod as ser
 
 import logging
 
 logger = logging.getLogger('database')
+
 
 class CreateUserErrorCode(IntEnum):
     NON_UNIQUE_EMAIL = 0
@@ -24,8 +25,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(50), unique=True)
     password_hash: Mapped[str] = mapped_column(String(256))
 
-    user_info: Mapped['UserInfo | None'] = \
-        relationship(back_populates='user', cascade='all, delete-orphan')
+    user_info: Mapped['UserInfo'] = relationship(back_populates='user', cascade='all, delete-orphan')
     responses: Mapped[list['response.OpportunityResponse']] = \
         relationship(back_populates='user', cascade='all, delete-orphan')
 
@@ -36,21 +36,22 @@ class User(Base):
         return sha256(password.encode()).hexdigest()
 
     @classmethod
-    def create(cls, session: Session, request: ser.User.Create) \
-            -> Self | GenericError[CreateUserErrorCode]:
+    def create(cls, session: Session, request: ser.User.Create) -> Self | GenericError[CreateUserErrorCode]:
         user = session.query(User).filter(User.email == request.email).first()
         if user is not None:
-            logger.debug('\'User.create\' exited with \'NON_UNIQUE_EMAIL\' '
-                         'error (email=\'%s\')', request.email)
-            return GenericError(
-                error_code=CreateUserErrorCode.NON_UNIQUE_EMAIL,
-                error_message='User with given email already exists',
-            )
-        user = User(email=request.email,
-                    password_hash=cls.hash_password(request.password))
+            logger.debug('\'User.create\' exited with \'NON_UNIQUE_EMAIL\' error (email=\'%s\')', request.email)
+            return GenericError(error_code=CreateUserErrorCode.NON_UNIQUE_EMAIL,
+                                error_message='User with given email already exists')
+        user = User(email=request.email, password_hash=cls.hash_password(request.password))
         user.user_info = UserInfo(user=user)
         session.add(user)
         return user
+
+    # TODO
+    @classmethod
+    def change_password(cls, session: Session, request: ...) -> None:
+        ...
+
 
 class UpdateUserInfoErrorCode(IntEnum):
     INVALID_USER_ID = 0
@@ -58,22 +59,18 @@ class UpdateUserInfoErrorCode(IntEnum):
 class UserInfo(Base):
     __tablename__ = 'user_info'
 
-    user_id: Mapped[int] = \
-        mapped_column(ForeignKey('user.id'), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('user.id'), primary_key=True)
     name: Mapped[str] = mapped_column(String(30), nullable=True)
     surname: Mapped[str] = mapped_column(String(40), nullable=True)
     birthday: Mapped[datetime] = mapped_column(nullable=True)
-    city_id: Mapped[int] = \
-        mapped_column(ForeignKey('city.id'), nullable=True)
-    phone_number_id: Mapped[int | None] = \
-        mapped_column(ForeignKey('phone_number.id'), unique=True, nullable=True)
+    city_id: Mapped[int] = mapped_column(ForeignKey('city.id'), nullable=True)
+    phone_number_id: Mapped[int | None] = mapped_column(ForeignKey('phone_number.id'), unique=True, nullable=True)
     avatar: Mapped[file_uri] = mapped_column(FileURI, nullable=True)
 
     user: Mapped['User'] = relationship(back_populates='user_info')
-    address: Mapped['City | None'] = relationship()
+    address: Mapped[Union['City', None]] = relationship()
     phone_number: Mapped['PhoneNumber | None'] = relationship()
-    cvs: Mapped[list['CV']] = \
-        relationship(back_populates='user_info', cascade='all, delete-orphan')
+    cvs: Mapped[list['CV']] = relationship(back_populates='user_info', cascade='all, delete-orphan')
 
     @property
     def fullname(self) -> str:
@@ -85,61 +82,48 @@ class UserInfo(Base):
     def __update_surname(self, new_surname: str, *args, **kwargs) -> None:
         self.surname = new_surname
 
-    def __update_birthday(self, new_birthday: ser.auxillary.Date,
-                          *args, **kwargs) -> None:
-        self.birthday = \
-            datetime(new_birthday.year, new_birthday.month, new_birthday.day)
+    def __update_birthday(self, new_birthday: ser.auxillary.Date, *args, **kwargs) -> None:
+        self.birthday = datetime(new_birthday.year, new_birthday.month, new_birthday.day)
 
     def __update_city(self, city_id: int, *args, **kwargs) -> None:
         self.city_id = city_id
 
-    def __update_phone_number(
-        self, new_phone_number: ser.auxillary.PhoneNumber, *args,
-        session: Session, **kwargs
-    ) -> None | GenericError[UpdateUserInfoErrorCode]:
-        phone_number_or_error = \
-            PhoneNumber.get_or_create(session, new_phone_number)
-        if isinstance(phone_number_or_error, PhoneNumber):
-            self.phone_number = phone_number_or_error
-            return None
-        return phone_number_or_error
-    
-    # TODO: add separate method for update
-    def __update_avatar(self, new_avatar: file_uri, *args, **kwargs) -> None:
-        self.avatar = new_avatar
-    
-    __field_handlers = (
+    __update_field_handlers = (
         ('name', __update_name),
         ('surname', __update_surname),
         ('birthday', __update_birthday),
         ('city_id', __update_city),
-        ('phone_number', __update_phone_number),
     )
 
     @classmethod
-    def update(cls, session: Session, request: ser.UserInfo.Update) \
-            -> None | GenericError[UpdateUserInfoErrorCode]:
+    def update(cls, session: Session, request: ser.UserInfo.Update) -> None | GenericError[UpdateUserInfoErrorCode]:
         user: User | None = session.query(User).get(request.user_id)
         if user is None:
-            logger.debug('\'UserInfo.update\' exited with \'INVALID_USER_ID\' '
-                         'error (user_id=%i)', request.user_id)
+            logger.debug('\'UserInfo.update\' exited with \'INVALID_USER_ID\' error (user_id=%i)', request.user_id)
             return GenericError(
                 error_code=UpdateUserInfoErrorCode.INVALID_USER_ID,
                 error_message='User with provided id doesn\'t exist'
             )
-        for field, handler in UserInfo.__field_handlers:
+        for field, handler in UserInfo.__update_field_handlers:
             if getattr(request, field) is None:
                 continue
-            error_or_none = handler(user.user_info, getattr(request, field),
-                                    session=session)
+            error_or_none = handler(user.user_info, getattr(request, field), session=session)
             if error_or_none is not None:
                 return error_or_none
 
     # TODO
     @classmethod
-    def update_avatar(cls, session: Session, request: ser.UserInfo.UpdateAvatar) \
-            -> None:
+    def update_phone_number(cls, session: Session, request: ...) -> None:
         ...
+
+    # TODO
+    @classmethod
+    def update_avatar(cls, session: Session, request: ser.UserInfo.UpdateAvatar) -> None:
+        ...
+
+
+class DeleteCVErrorCode(IntEnum):
+    INVALID_CV_ID = 0
 
 class CV(Base):
     __tablename__ = 'cv'
@@ -155,10 +139,18 @@ class CV(Base):
     def create(cls, session: Session, request: ser.CV.Create) -> None:
         ...
 
-    # TODO
     @classmethod
-    def delete(cls, session: Session, request: ser.CV.Delete) -> None:
-        ...
+    def delete(cls, session: Session, request: ser.CV.Delete) -> None | GenericError[DeleteCVErrorCode]:
+        cv: CV | None = session.query(CV).get(request.cv_id)
+        if cv is None:
+            logger.debug('\'CV.delete\' exited with \'INVALID_CV_ID\' error (cv_id=%i)', request.cv_id)
+            return GenericError(
+                error_code=DeleteCVErrorCode.INVALID_CV_ID,
+                error_message='CV with provided id doesn\'t exist'
+            )
+        session.delete(cv)
+        return None
 
-# magic fix, placing it in the beggining of a file results in error on line 19
+
+# magic fix, placing it in the beggining of a file results in error
 from models.opportunity import response
