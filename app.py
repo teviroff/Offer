@@ -1,7 +1,7 @@
 from typing import Annotated
 from datetime import datetime
 
-from fastapi import FastAPI, Request, Query
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.templating import Jinja2Templates
@@ -14,7 +14,8 @@ import formatters.mod as fmt
 app = FastAPI()
 templates = Jinja2Templates(directory='templates')
 
-import logging, os
+import logging
+import os
 
 LOG_FOLDER = datetime.now().strftime('%d.%m.%Y')
 LOG_FILENAME = f'{datetime.now().timestamp()}'
@@ -27,8 +28,16 @@ logging.basicConfig(
     level=logging.DEBUG
 )
 
+
 url_to_error_formatter = {
-    ('/api/user', 'POST'): fmt.CreateUser.POSTFormatter,
+    ('/api/user', 'POST'): fmt.CreateUserFormatter,
+    ('/api/user/info', 'PATCH'): fmt.UpdateUserInfoFormatter,
+    ('/api/user/cv', 'DELETE'): fmt.DeleteUserCVFormatter,
+    ('/api/opportunity-provider', 'POST'): fmt.CreateProviderFormatter,
+    ('/api/opportunity', 'POST'): fmt.CreateOpportunityFormatter,
+    ('/api/opportunity-tag', 'POST'): fmt.CreateOpportunityTagFormatter,
+    ('/api/opportunity-geotag', 'POST'): fmt.CreateOpportunityGeoTagFormatter,
+    ('/api/opportunity-card', 'POST'): fmt.CreateOpportunityCardFormatter,
 }
 
 @app.exception_handler(RequestValidationError)
@@ -38,147 +47,118 @@ def validation_error_handler(
 ) -> JSONResponse:
     if (request.url.path, request.method) in url_to_error_formatter:
         return JSONResponse(
-            content=url_to_error_formatter[(request.url.path, request.method)]
-                        .format_serializer_errors(e.errors()),
+            url_to_error_formatter[(request.url.path, request.method)].format_serializer_errors(e.errors()),
             status_code=422,
         )
     print(e.errors())
-    return JSONResponse(content={}, status_code=500)
+    return JSONResponse({}, status_code=500)
+
 
 @app.post('/api/user')
-def create_user(
-    api_key: Annotated[str | None, Query()] = None,
-    request: ser.User.Create = ...,
-) -> JSONResponse:
+def create_user(request: ser.User.Create) -> JSONResponse:
     with db.Session.begin() as session:
         user_or_error = db.User.create(session, request)
         if not isinstance(user_or_error, db.User):
             session.rollback()
-            return JSONResponse(
-                content=fmt.CreateUser.POSTFormatter \
-                    .format_db_error(user_or_error),
-                status_code=422,
-            )
+            return JSONResponse(fmt.CreateUserFormatter.format_db_errors([user_or_error]), status_code=422)
     return JSONResponse({})
 
-# TODO: add error formatter
 @app.patch('/api/user/info')
-def update_user_info(
-    api_key: Annotated[str | None, Query()] = None,
-    request: ser.UserInfo.Update = ...,
-) -> JSONResponse:
+def update_user_info(request: ser.UserInfo.Update) -> JSONResponse:
     with db.Session.begin() as session:
         none_or_error = db.UserInfo.update(session, request)
         if none_or_error is not None:
             session.rollback()
-            return JSONResponse(
-                content=...,
-                status_code=422,
-            )
+            return JSONResponse(fmt.UpdateUserInfoFormatter.format_db_errors([none_or_error]), status_code=422)
     return JSONResponse({})
 
-# TODO: figure out S3, add error formatter
+# TODO
+# @app.patch('/api/user/phone-number')
+# def update_user_phone_number(request: ...) -> JSONResponse:
+#     ...
+#     return JSONResponse({})
+
+# TODO: figure out S3
 @app.patch('/api/user/avatar')
-def update_user_avatar(
-    api_key: Annotated[str | None, Query()] = None,
-    request: ser.UserInfo.UpdateAvatar = ...,
-) -> JSONResponse:
+def update_user_avatar(request: ser.UserInfo.UpdateAvatar) -> JSONResponse:
     ...
     return JSONResponse({})
 
-# TODO: add error formatter
-@app.post('/api/opprovider')
-def create_opportunity_provider(
-    api_key: Annotated[str, Query()] = ...,
-    request: ser.OpportunityProvider.Create = ...
-) -> JSONResponse:
+# TODO: figure out S3
+@app.post('/api/user/cv')
+def add_user_cv(request: ser.UserInfo.UpdateAvatar) -> JSONResponse:
+    ...
+    return JSONResponse({})
+
+@app.delete('/api/user/cv')
+def delete_user_cv(request: ser.CV.Delete) -> JSONResponse:
+    with db.Session.begin() as session:
+        none_or_error = db.CV.delete(session, request)
+        if none_or_error is not None:
+            session.rollback()
+            return JSONResponse(fmt.DeleteUserCVFormatter.format_db_errors([none_or_error]), status_code=422)
+    return JSONResponse({})
+
+@app.post('/api/opportunity-provider')
+def create_opportunity_provider(request: ser.OpportunityProvider.Create) -> JSONResponse:
     with db.Session.begin() as session:
         _ = db.OpportunityProvider.create(session, request)
     return JSONResponse({})
 
-# TODO: add error formatter
 @app.post('/api/opportunity')
-def create_opportunity(
-    api_key: Annotated[str, Query()] = ...,
-    request: ser.Opportunity.Create = ...
-) -> JSONResponse:
+def create_opportunity(request: ser.Opportunity.Create) -> JSONResponse:
     with db.Session.begin() as session:
         opp_or_error = db.Opportunity.create(session, request)
         if not isinstance(opp_or_error, db.Opportunity):
             session.rollback()
-            return JSONResponse(
-                content=...,
-                status_code=422,
-            )
+            return JSONResponse(fmt.CreateOpportunityFormatter.format_db_errors([opp_or_error]), status_code=422)
     return JSONResponse({})
 
 # TODO: add error formatter
 @app.post('/api/opportunity/tags')
-def add_opportunity_tags(
-    api_key: Annotated[str, Query()] = ...,
-    request: ser.Opportunity.AddTags = ...,
-) -> JSONResponse:
+def add_opportunity_tags(request: ser.Opportunity.AddTags) -> JSONResponse:
     ...
     return JSONResponse({})
 
 # TODO: add error formatter
 @app.post('/api/opportunity/geotags')
-def add_opportunity_geo_tags(
-    api_key: Annotated[str, Query()] = ...,
-    request: ser.Opportunity.AddGeoTags = ...,
-) -> JSONResponse:
+def add_opportunity_geo_tags(request: ser.Opportunity.AddGeoTags) -> JSONResponse:
     ...
     return JSONResponse({})
 
-# TODO: add error formatter
-@app.post('/api/opptag')
-def create_opportunity_tag(
-    api_key: Annotated[str, Query()] = ...,
-    request: ser.OpportunityTag.Create = ...
-) -> JSONResponse:
+@app.post('/api/opportunity-tag')
+def create_opportunity_tag(request: ser.OpportunityTag.Create) -> JSONResponse:
     with db.Session.begin() as session:
         tag_or_error = db.OpportunityTag.create(session, request)
         if not isinstance(tag_or_error, db.OpportunityTag):
             session.rollback()
-            return JSONResponse(
-                content=...,
-                status_code=422,
-            )
+            return JSONResponse(fmt.CreateOpportunityTagFormatter.format_db_errors([tag_or_error]), status_code=422)
     return JSONResponse({})
 
-# TODO: add error formatter
-@app.post('/api/oppgeotag')
-def create_opportunity_geo_tag(
-    api_key: Annotated[str, Query()] = ...,
-    request: ser.OpportunityGeoTag.Create = ...,
-) -> JSONResponse:
+@app.post('/api/opportunity-geotag')
+def create_opportunity_geo_tag(request: ser.OpportunityGeoTag.Create) -> JSONResponse:
     with db.Session.begin() as session:
         tag_or_error = db.OpportunityGeoTag.create(session, request)
         if not isinstance(tag_or_error, db.OpportunityGeoTag):
             session.rollback()
-            return JSONResponse(
-                content=...,
-                status_code=422,
-            )
+            return JSONResponse(fmt.CreateOpportunityGeoTagFormatter.format_db_errors([tag_or_error]), status_code=422)
     return JSONResponse({})
 
-# TODO: add error formatter
-@app.post('/api/oppcard')
-def create_opportunity_card(
-    api_key: Annotated[str, Query()] = ...,
-    request: ser.OpportunityCard.Create = ...,
-) -> JSONResponse:
-    ...
+@app.post('/api/opportunity-card')
+def create_opportunity_card(request: ser.OpportunityCard.Create) -> JSONResponse:
+    with db.Session.begin() as session:
+        card_or_error = db.OpportunityCard.create(session, request)
+        if not isinstance(card_or_error, db.OpportunityCard):
+            session.rollback()
+            return JSONResponse(fmt.CreateOpportunityCardFormatter.format_db_errors([card_or_error]), status_code=422)
     return JSONResponse({})
 
 # TODO: figure out NoSQL, add error formatter
-@app.post('/api/oppresponse')
-def create_opportunity_response(
-    api_key: Annotated[str | None, Query()] = None,
-    request: ser.OpportunityResponse.Create = ...,
-) -> JSONResponse:
+@app.post('/api/opportunity-response')
+def create_opportunity_response(request: ser.OpportunityResponse.Create) -> JSONResponse:
     ...
     return JSONResponse({})
+
 
 if __name__ == "__main__":
     uvicorn.run("app:app")
