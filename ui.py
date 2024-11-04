@@ -34,6 +34,34 @@ def login(request: Request):
     if request.cookies.get('email') is None:
         return FileResponse("templates/login.html")
     return RedirectResponse(url='/')
+
+somedata = {
+    'name': 'Junior C#',
+    'provider': {'name': 'Yandex',},
+    'tags': [{'name': 'C#'}, {'name': 'Backend'}],
+    'geo_tags': [{'city_name': 'Moscow'}, {'city_name': 'Peter'}],
+    'description': 'C# ASP .NET'
+}
+@app.get("/opportunity")
+def opportunity(request: Request):
+    somedata['request'] = request
+    return templates.TemplateResponse(name='opportunity.html', context=somedata)
+
+carddata = {
+    'title': 'C# Junior Desktop',
+    'sub_title': 'MaUI .NET',
+    'provider': {
+        'name': 'MICROSOFT'
+    },
+    'tags': [{'name': 'C#'}, {'name': 'MaUI'}],
+    'geo_tags': [{'city_name': 'Moscow'}, {'city_name': 'Peter'}]
+}
+@app.get("/card")
+def card(request: Request):
+    carddata['request'] = request
+    return templates.TemplateResponse(name='card.html', context=carddata)
+
+
 d = {
   "email": [
     {
@@ -61,6 +89,7 @@ async def LoginForm(request: Request):
     response.set_cookie(key="email", value=parsedJson.get("email"))
     response.set_cookie(key="password", value=parsedJson.get("password"))
     return response
+
 
 if __name__ == "__main__":
     uvicorn.run("ui:app")
