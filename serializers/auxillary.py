@@ -1,11 +1,12 @@
-from typing import Annotated, Self
+from typing import Self
 from datetime import datetime
-
-from pydantic import BaseModel, Field, model_validator
+from serializers.base import *
+from pydantic import model_validator
 from pydantic_core import PydanticCustomError
 
+
 class Date(BaseModel):
-    model_config = { 'extra': 'ignore' }
+    model_config = {'extra': 'ignore'}
 
     day: Annotated[int, Field(ge=1, le=31, strict=True)]
     month: Annotated[int, Field(ge=1, le=12, strict=True)]
@@ -16,25 +17,26 @@ class Date(BaseModel):
         try:
             datetime(day=self.day, month=self.month, year=self.year)
         except ValueError:
-            raise PydanticCustomError(
-                'date_error', 'Invalid combination of year, month and day'
-            )
+            raise PydanticCustomError('date_error', 'Invalid combination of year, month and day')
         return self
 
-class PhoneNumber(BaseModel):
-    model_config = { 'extra': 'ignore' }
 
-    country_id: Annotated[int, Field(ge=1, strict=True)]
+class PhoneNumber(BaseModel):
+    model_config = {'extra': 'ignore'}
+
+    country_id: ID
     sub_number: Annotated[str, Field(max_length=12, pattern=r'\d+')]
 
+
 class Country(BaseModel):
-    model_config = { 'extra': 'ignore' }
+    model_config = {'extra': 'ignore'}
 
     name: Annotated[str, Field(min_length=1, max_length=50)]
     phone_code: Annotated[int, Field(ge=1, lt=1000)]
 
-class City(BaseModel):
-    model_config = { 'extra': 'ignore' }
 
-    country_id: Annotated[int, Field(ge=1, strict=True)]
+class City(BaseModel):
+    model_config = {'extra': 'ignore'}
+
+    country_id: ID
     name: Annotated[str, Field(min_length=1, max_length=50)]

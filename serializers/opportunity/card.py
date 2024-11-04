@@ -1,10 +1,10 @@
-from typing import Annotated
-from pydantic import BaseModel, Field
+from serializers.base import *
+
 
 class Create(BaseModel):
-    model_config = { 'extra': 'ignore' }
+    model_config = {'extra': 'ignore'}
 
-    opportunity_id: Annotated[int, Field(ge=1, strict=True)]
-    title: Annotated[str, Field(max_length=30)]
-    sub_title: Annotated[Annotated[str, Field(max_length=30)] | None,
-                         Field(default=None)]
+    api_key: API_KEY
+    opportunity_id: ID
+    title: Annotated[str, Field(min_length=1, max_length=30)]
+    sub_title: Annotated[Annotated[str, Field(min_length=1, max_length=30)] | None, Field(default=None)]

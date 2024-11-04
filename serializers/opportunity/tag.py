@@ -1,7 +1,8 @@
-from typing import Annotated
-from pydantic import BaseModel, Field
+from serializers.base import *
+
 
 class Create(BaseModel):
-    model_config = { 'extra': 'ignore' }
+    model_config = {'extra': 'ignore'}
 
-    name: Annotated[str, Field(max_length=50)]
+    api_key: API_KEY
+    name: Annotated[str, Field(min_length=1, max_length=50)]

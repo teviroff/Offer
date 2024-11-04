@@ -1,4 +1,3 @@
-from typing import Annotated
 from datetime import datetime
 
 from fastapi import FastAPI, Request
@@ -35,6 +34,7 @@ url_to_error_formatter = {
     ('/api/user/cv', 'DELETE'): fmt.DeleteUserCVFormatter,
     ('/api/opportunity-provider', 'POST'): fmt.CreateProviderFormatter,
     ('/api/opportunity', 'POST'): fmt.CreateOpportunityFormatter,
+    ('/api/opportunity/tags', 'POST'): fmt.AddOpportunityTagFormatter,
     ('/api/opportunity-tag', 'POST'): fmt.CreateOpportunityTagFormatter,
     ('/api/opportunity-geotag', 'POST'): fmt.CreateOpportunityGeoTagFormatter,
     ('/api/opportunity-card', 'POST'): fmt.CreateOpportunityCardFormatter,
@@ -114,10 +114,13 @@ def create_opportunity(request: ser.Opportunity.Create) -> JSONResponse:
             return JSONResponse(fmt.CreateOpportunityFormatter.format_db_errors([opp_or_error]), status_code=422)
     return JSONResponse({})
 
-# TODO: add error formatter
 @app.post('/api/opportunity/tags')
 def add_opportunity_tags(request: ser.Opportunity.AddTags) -> JSONResponse:
-    ...
+    with db.Session.begin() as session:
+        none_or_errors = db.Opportunity.add_tags(session, request)
+        if none_or_errors is not None:
+            session.rollback()
+            return JSONResponse(fmt.AddOpportunityTagFormatter.format_db_errors(none_or_errors), status_code=422)
     return JSONResponse({})
 
 # TODO: add error formatter
