@@ -1,40 +1,18 @@
-import json
-from http.client import responses
-from pydoc import resolve
-from urllib import request
+
+# import api
+from api import (
+    app, db, ser, Request, JSONResponse,
+)
 
 import uvicorn
-
-from fastapi import FastAPI, Form
-from fastapi.params import Cookie
-from fastapi.responses import FileResponse
-from pydantic import RedisDsn
-from starlette.requests import Request
-from starlette.responses import JSONResponse, RedirectResponse
-
-from starlette.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.responses import RedirectResponse
+from starlette.staticfiles import StaticFiles
 
 
-app = FastAPI()
 app.mount('/scripts', StaticFiles(directory='scripts', html=True), name='scripts')
 templates = Jinja2Templates(directory='templates')
-@app.get("/")
-def root(request: Request):
-    email = request.cookies.get('email')
-    if email is None:
-        return RedirectResponse(url='/login')
-    else:
-        return templates.TemplateResponse(name='main.html', context={'request': request, 'email': email})
 
-@app.get("/register")
-def register():
-    return FileResponse("templates/base.html")
-@app.get("/login")
-def login(request: Request):
-    if request.cookies.get('email') is None:
-        return FileResponse("templates/login.html")
-    return RedirectResponse(url='/')
 
 somedata = {
     'name': 'Junior C#',
@@ -91,34 +69,24 @@ def card(request: Request):
     carddata['request'] = request
     return templates.TemplateResponse(name='card.html', context=carddata)
 
+@app.get('/')
+def root(request: Request):
+    user_id = request.cookies.get('user_id')
+    if user_id is not None:
+        return RedirectResponse('/login')
+    return templates.TemplateResponse('main.html', context={'request': request, 'user_id': user_id})
 
-d = {
-  "email": [
-    {
-      "type": 102,
-      "message": "Not a valid email address"
-    }
-  ],
-  "password": [
-    {
-      "type": 102,
-      "message": "Password must contain at least one lowercase letter, one uppercase letter, one digit and one special character"
-    }
-  ]
-}
+@app.get('/register')
+def register(request: Request):
+    if request.cookies.get('user_id') is not None:
+        return RedirectResponse('/')
+    return templates.TemplateResponse('register.html', context={'request': request})
 
-@app.post("/register")
-async def RegistrationForm(request: Request):
-    return JSONResponse(content="", status_code=200)
-    # return JSONResponse(content=d, status_code=422)
-
-@app.post("/login")
-async def LoginForm(request: Request):
-    response = JSONResponse(content="", status_code=200)
-    parsedJson = await request.json()
-    response.set_cookie(key="email", value=parsedJson.get("email"))
-    response.set_cookie(key="password", value=parsedJson.get("password"))
-    return response
+@app.get('/login')
+def login(request: Request):
+    if request.cookies.get('user_id') is not None:
+        return RedirectResponse('/')
+    return templates.TemplateResponse('login.html', context={'request': request})
 
 @app.post('/getcities')
 async def GetCities(request: Request):
@@ -133,5 +101,5 @@ async def UpdateUser(request: Request):
     print(newuser)
     return JSONResponse(content=newuser, status_code=200)
 
-if __name__ == "__main__":
-    uvicorn.run("ui:app")
+if __name__ == '__main__':
+    uvicorn.run('ui:app')

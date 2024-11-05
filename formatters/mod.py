@@ -1,5 +1,6 @@
 from formatters.user import (
-    CreateUserFormatter, UpdateUserInfoFormatter, DeleteUserCVFormatter
+    CreateUserFormatter, LoginFormatter,
+    UpdateUserInfoFormatter, DeleteUserCVFormatter
 )
 from formatters.opportunity.provider import CreateProviderFormatter
 from formatters.opportunity.opportunity import (
