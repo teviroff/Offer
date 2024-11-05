@@ -5,13 +5,28 @@
     <title>Title</title>
 </head>
 <body>
+<label>
+    <input type="text" value={{user.name}} id="namefield">
+</label>
+<label>
+    <input type="text" value={{user.surname}} id="surnamefield">
+</label>
+<label>
+    <input type='date' value="{{date}}" id="datefield">
+</label>
+
 COUNTRY:
 <select id="country">
-
+    {% for country in countries %}
+        <option value={{country}}>{{country}}</option>
+    {% endfor %}
 </select>
 CITIES:
 <select id="city">
 
+
 </select>
+<button id="submit_btn">Submit</button>
 </body>
+<script src="../scripts/userupdate.js"></script>
 </html>
