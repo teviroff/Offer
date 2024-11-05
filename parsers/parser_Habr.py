@@ -40,7 +40,7 @@ for page in range(1, 7):
 culc = 0
 allVacancyForms = []
 allVacancyCard_JSON = []
-json_file.write("{")
+json_file.write("[")
 for link in allVacancyCard_link:
   card_data = {}
 
@@ -81,7 +81,7 @@ for link in allVacancyCard_link:
   print(culc)
   card_data['id'] = culc
 
-json_file.write("{ }\n}")
+json_file.write("{ }\n]")
 
 #-------------------Writing the html code of the forms for vacancies to the file--------------
 # with open('allVacancy_form.html', 'w', encoding='utf-8') as f:

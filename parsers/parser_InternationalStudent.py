@@ -6,7 +6,6 @@ json_file = open('Offer/JSON_webs/allVacancyCard_JSON_InternationalStudent.json'
 service = ChromeService(executable_path=ChromeDriverManager().install())
 
 options = webdriver.ChromeOptions()
-options.timeouts = { 'pageLoad': 5000 }
 # options.add_argument("--headless")
 
 driver = webdriver.Chrome(service=service, options=options)
@@ -16,14 +15,18 @@ driver = webdriver.Chrome(service=service, options=options)
 #   f.write(page)
 
 allVacancyCard_link = []
-for page in range(1, 143):
-  driver.get(url + f'{page}')
-  page = driver.page_source
+for num in range(1, 143):
+  try:
+    driver.get(url + f'{num}')
+    page = driver.page_source
+  except:
+    continue
 
   soup = BeautifulSoup(page, "html.parser")
   for link in soup.find_all('a', class_='font-bitter text-left text-danger mb-2 mb-lg-0'):
     allVacancyCard_link.append('https://www.internationalstudent.com' + link.get('href'))
 
+driver.close() 
 # allVacancyCard_link = allVacancyCard_link[:1]
 
 #------------------Writing the html code of the job cards to the file----------------
@@ -35,10 +38,15 @@ for page in range(1, 143):
 #   for s in allVacancyCard_link:
 #     f.write(str(s) + '\n')
 
+options = webdriver.ChromeOptions()
+options.timeouts = { 'pageLoad': 5000 }
+# options.add_argument("--headless")
+driver = webdriver.Chrome(service=service, options=options)
+
 culc = 0
 allVacancyForms = []
 allVacancyCard_JSON = []
-json_file.write("{")
+json_file.write("[")
 for link in allVacancyCard_link:
   card_data = {}
 
@@ -85,7 +93,7 @@ for link in allVacancyCard_link:
   print(culc)
   card_data['id'] = culc
     
-json_file.write("{ }\n}")
+json_file.write("{ }\n]")
 
 #-------------------Writing the html code of the forms for vacancies to the file--------------
 # with open('allVacancy_form.html', 'w', encoding='utf-8') as f:
