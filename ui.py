@@ -1,5 +1,4 @@
 from typing import Annotated
-
 from app import *
 from uvicorn import run
 from fastapi import Path
@@ -19,6 +18,35 @@ def opportunity(request: Request, opportunity_id: Annotated[int, Path()]):
     ...
     somedata['request'] = request
     return templates.TemplateResponse('opportunity.html', context=somedata)
+
+userupdatedata = {
+    'user_id': 0,
+    'name': 'Max',
+    'surname': 'Flugelev',
+    'birthday': {
+        'day': 5,
+        'month': 11,
+        'year': 2006
+    },
+    # 'city_id': 0,
+}
+
+countries = {
+    'Russia': ['Moscow', 'Peter', 'Novosibirsk', 'Penza'],
+    'Spain': ['Madrid', 'Ronaldo', 'Messi']
+}
+
+
+@app.get("/update")
+def update(request: Request):
+    data = countries.keys()
+    birthday = userupdatedata.get('birthday')
+    print(birthday)
+    date = f'{birthday.get('year'):04}-{birthday.get('month'):02}-{birthday.get('day'):02}'
+    print(date)
+    context = {'request': request, 'countries': data, 'user': userupdatedata, 'date': date}
+    return templates.TemplateResponse(name='userupdate.html', context=context)
+
 
 carddata = {
     'title': 'C# Junior Desktop',
@@ -53,6 +81,18 @@ def login(request: Request):
         return RedirectResponse('/')
     return templates.TemplateResponse('login.html', context={'request': request})
 
+@app.post('/getcities')
+async def GetCities(request: Request):
+    country = (await request.json()).get('country')
+
+    print(countries[country])
+    return JSONResponse(content=countries[country], status_code=200)
+
+@app.post('/updateuser')
+async def UpdateUser(request: Request):
+    newuser = await request.json()
+    print(newuser)
+    return JSONResponse(content=newuser, status_code=200)
 
 if __name__ == '__main__':
     run('ui:app')
