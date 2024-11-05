@@ -4,6 +4,8 @@ import json
 from bs4 import BeautifulSoup
 from lxml import etree 
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from time import sleep
+import urllib, json
