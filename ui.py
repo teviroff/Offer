@@ -13,6 +13,32 @@ app.mount('/scripts', StaticFiles(directory='scripts', html=True), name='scripts
 templates = Jinja2Templates(directory='templates')
 
 
+somedata = {
+    'name': 'Junior C#',
+    'provider': {'name': 'Yandex',},
+    'tags': [{'name': 'C#'}, {'name': 'Backend'}],
+    'geo_tags': [{'city_name': 'Moscow'}, {'city_name': 'Peter'}],
+    'description': 'C# ASP .NET'
+}
+@app.get("/opportunity")
+def opportunity(request: Request):
+    somedata['request'] = request
+    return templates.TemplateResponse(name='opportunity.html', context=somedata)
+
+carddata = {
+    'title': 'C# Junior Desktop',
+    'sub_title': 'MaUI .NET',
+    'provider': {
+        'name': 'MICROSOFT'
+    },
+    'tags': [{'name': 'C#'}, {'name': 'MaUI'}],
+    'geo_tags': [{'city_name': 'Moscow'}, {'city_name': 'Peter'}]
+}
+@app.get("/card")
+def card(request: Request):
+    carddata['request'] = request
+    return templates.TemplateResponse(name='card.html', context=carddata)
+
 @app.get('/')
 def root(request: Request):
     user_id = request.cookies.get('user_id')
