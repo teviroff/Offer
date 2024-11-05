@@ -5,24 +5,48 @@
     <title>Title</title>
 </head>
 <body>
-<label>
-    <input type="text" value={{user.name}} id="namefield">
-</label>
-<label>
-    <input type="text" value={{user.surname}} id="surnamefield">
-</label>
-<label>
-    <input type='date' value="{{date}}" id="datefield">
-</label>
+    <p>
+        Name<br>
+        <div>
+            {% if name %}
+                <input type="text" value={{name}} id="namefield">
+            {% else %}
+                <input type="text" id="namefield">
+            {% endif %}
+            <p></p>
+        </div>
+    </p>
+    <p>
+        Surname<br>
+        <div>
+            {% if surname %}
+                <input type="text" value={{surname}} id="surnamefield">
+            {% else %}
+                <input type="text" id="surnamefield">
+            {% endif %}
+            <p></p>
+        </div>
+    </p>
+    <p>
+        Birthday<br>
+        <div>
+            {% if birthday %}
+                <input type='date' value="{{birthday}}" id="datefield">
+            {% else %}
+                <input type='date' id="datefield">
+            {% endif %}
+            <p></p>
+        </div>
+    </p>
 
-COUNTRY:
-<select id="country">
-    {% for country in countries %}
-        <option value={{country}}>{{country}}</option>
-    {% endfor %}
-</select>
-CITIES:
-<select id="city">
+<!--COUNTRY:-->
+<!--<select id="country">-->
+<!--    {% for country in countries %}-->
+<!--        <option value={{country}}>{{country}}</option>-->
+<!--    {% endfor %}-->
+<!--</select>-->
+<!--CITIES:-->
+<!--<select id="city">-->
 
 
 </select>

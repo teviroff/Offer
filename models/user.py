@@ -65,6 +65,18 @@ class User(Base):
     def change_password(cls, session: Session, request: ...) -> None:
         ...
 
+    @classmethod
+    def get_info(cls, session: Session, user_id: int) -> dict | None:
+        user: User | None = session.query(User).get(user_id)
+        if user is None:
+            return
+        return {
+            'name': user.user_info.name,
+            'surname': user.user_info.surname,
+            'birthday': user.user_info.birthday.strftime('%Y-%m-%d') if user.user_info.birthday is not None else None,
+            # TODO: city, phone number, avatar
+        }
+
 
 class UpdateUserInfoErrorCode(IntEnum):
     INVALID_USER_ID = 0

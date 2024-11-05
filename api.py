@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from app import *
+from config import *
 from fastapi.responses import JSONResponse
 
 import db as db

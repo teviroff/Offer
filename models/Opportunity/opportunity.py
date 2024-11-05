@@ -114,6 +114,19 @@ class Opportunity(Base):
         if len(tag_errors) > 0:
             return tag_errors
 
+    @classmethod
+    def get_dict(cls, session: Session, opportunity_id: int) -> dict | None:
+        opportunity: Opportunity | None = session.query(Opportunity).get(opportunity_id)
+        if opportunity is None:
+            return
+        return {
+            'name': opportunity.name,
+            'provider': {'name': opportunity.provider.name},
+            'tags': [{'name': tag.name} for tag in opportunity.tags],
+            'geo_tags': [{'city_name': geo_tag.city.name} for geo_tag in opportunity.geo_tags],
+            'description': opportunity.description,
+        }
+
 
 class OpportunityProvider(Base):
     __tablename__ = 'opportunity_provider'
