@@ -47,6 +47,19 @@ class User(Base):
         session.add(user)
         return user
 
+    @classmethod
+    def login(cls, session: Session, request: ser.User.Login) -> Self | None:
+        user: User | None = session.query(User).filter(User.email == request.email).first()
+        if user is None:
+            logger.debug('\'User.login\' exited because user with given email doesn\'t exist '
+                         '(email=\'%s\')', request.email)
+            return None
+        if user.password_hash != cls.hash_password(request.password):
+            logger.debug('\'User.login\' exited because user with given email have different password '
+                         '(email=\'%s\')', request.email)
+            return None
+        return user
+
     # TODO
     @classmethod
     def change_password(cls, session: Session, request: ...) -> None:

@@ -1,34 +1,32 @@
-const emailField = document.getElementById("login_form_email")
-const passwordField = document.getElementById("login_form_password")
-const loginBtn = document.getElementById("login_form_btn")
+const emailField = document.getElementById('login_form_email')
+const passwordField = document.getElementById('login_form_password')
+const loginBtn = document.getElementById('login_form_btn')
 
 loginBtn.addEventListener('click', (e) => {
-    fetch("/register", {
-      method: "POST",
-      body: JSON.stringify({
-          email: emailField.value,
-          password: passwordField.value
-      }),
-      headers: {
-        "Content-type": "application/json; charset=UTF-8",
-      },
+    emailField.parentElement.childNodes[2].textContent = ''
+    passwordField.parentElement.childNodes[2].textContent = ''
+    fetch('/api/user', {
+        method: 'POST',
+        body: JSON.stringify({
+            email: emailField.value,
+            password: passwordField.value
+        }),
+        headers: {
+            'Content-type': 'application/json; charset=UTF-8',
+        },
     })
-    .then((response) => response.json())
-    .then((json) => {
-        if (Object.keys(json).length === 0) {
-            window.location.href = "login"
-            console.log(10)
-        } else {
-            Object.keys(json).forEach(key => {
-                console.log(key)
-                console.log(emailField.parentElement.childNodes[1])
-                if (key === 'email') {
-                    emailField.parentElement.childNodes[2].textContent = json[key][0]['message']
-                } else if (key === 'password') {
-                    passwordField.parentElement.childNodes[2].textContent = json[key][0]['message']
-                }
-            })
+    .then(async (response) => {
+        if (response.status === 200) {
+            document.location.href = '/login'
+            return
         }
-        console.log(json)
-    });
-});
+        response_json = await response.json()
+        Object.keys(response_json).forEach(key => {
+            if (key === 'email') {
+                emailField.parentElement.childNodes[2].textContent = response_json[key][0]['message']
+            } else if (key === 'password') {
+                passwordField.parentElement.childNodes[2].textContent = response_json[key][0]['message']
+            }
+        })
+    })
+})

@@ -46,6 +46,19 @@ class CreateUserFormatter(BaseSerializerFormatter, BaseDBFormatter):
     })
 
 
+class LoginFormatter(BaseSerializerFormatter):
+    serializer_error_appender = BaseSerializerErrorAppender(
+        email=append_serializer_field_error_factory(
+            field_name='email',
+            transformer=CreateUserFormatter.transform_email_error
+        ),
+        password=append_serializer_field_error_factory(
+            field_name='password',
+            transformer=CreateUserFormatter.transform_password_error
+        ),
+    )
+
+
 class UpdateUserInfoFormatter(BaseSerializerFormatter, BaseDBFormatter):
     class ErrorCode(IntEnum):
         INVALID_USER_ID = 200

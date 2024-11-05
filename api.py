@@ -3,15 +3,12 @@ from datetime import datetime
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from starlette.templating import Jinja2Templates
-import uvicorn
 
 import db as db
 import serializers.mod as ser
 import formatters.mod as fmt
 
 app = FastAPI()
-templates = Jinja2Templates(directory='templates')
 
 import logging
 import os
@@ -29,6 +26,7 @@ logging.basicConfig(
 
 
 url_to_error_formatter = {
+    # API
     ('/api/user', 'POST'): fmt.CreateUserFormatter,
     ('/api/user/info', 'PATCH'): fmt.UpdateUserInfoFormatter,
     ('/api/user/cv', 'DELETE'): fmt.DeleteUserCVFormatter,
@@ -38,6 +36,8 @@ url_to_error_formatter = {
     ('/api/opportunity-tag', 'POST'): fmt.CreateOpportunityTagFormatter,
     ('/api/opportunity-geotag', 'POST'): fmt.CreateOpportunityGeoTagFormatter,
     ('/api/opportunity-card', 'POST'): fmt.CreateOpportunityCardFormatter,
+    # UI helpers
+    ('/login', 'POST'): fmt.LoginFormatter,
 }
 
 @app.exception_handler(RequestValidationError)
@@ -62,6 +62,16 @@ def create_user(request: ser.User.Create) -> JSONResponse:
             session.rollback()
             return JSONResponse(fmt.CreateUserFormatter.format_db_errors([user_or_error]), status_code=422)
     return JSONResponse({})
+
+@app.post('/login')
+async def login_submit_handler(request: ser.User.Login) -> JSONResponse:
+    with db.Session.begin() as session:
+        user_or_none = db.User.login(session, request)
+        if user_or_none is None:
+            return JSONResponse({}, status_code=401)
+        response = JSONResponse({})
+        response.set_cookie('user_id', str(user_or_none.id))
+    return response
 
 @app.patch('/api/user/info')
 def update_user_info(request: ser.UserInfo.Update) -> JSONResponse:
@@ -161,7 +171,3 @@ def create_opportunity_card(request: ser.OpportunityCard.Create) -> JSONResponse
 def create_opportunity_response(request: ser.OpportunityResponse.Create) -> JSONResponse:
     ...
     return JSONResponse({})
-
-
-if __name__ == "__main__":
-    uvicorn.run("app:app")
