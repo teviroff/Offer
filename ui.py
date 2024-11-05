@@ -1,16 +1,9 @@
-# import api
-from api import (
-    app, db, ser, Request, JSONResponse,
-)
+from typing import Annotated
 
-import uvicorn
-from fastapi.templating import Jinja2Templates
-from starlette.responses import RedirectResponse
-from starlette.staticfiles import StaticFiles
-
-
-app.mount('/scripts', StaticFiles(directory='scripts', html=True), name='scripts')
-templates = Jinja2Templates(directory='templates')
+from app import *
+from uvicorn import run
+from fastapi import Path
+from fastapi.responses import RedirectResponse
 
 
 somedata = {
@@ -20,10 +13,12 @@ somedata = {
     'geo_tags': [{'city_name': 'Moscow'}, {'city_name': 'Peter'}],
     'description': 'C# ASP .NET'
 }
-@app.get("/opportunity")
-def opportunity(request: Request):
+
+@app.get('/opportunity/{opportunity_id}')
+def opportunity(request: Request, opportunity_id: Annotated[int, Path()]):
+    ...
     somedata['request'] = request
-    return templates.TemplateResponse(name='opportunity.html', context=somedata)
+    return templates.TemplateResponse('opportunity.html', context=somedata)
 
 carddata = {
     'title': 'C# Junior Desktop',
@@ -60,4 +55,4 @@ def login(request: Request):
 
 
 if __name__ == '__main__':
-    uvicorn.run('ui:app')
+    run('ui:app')
