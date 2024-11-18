@@ -1,3 +1,4 @@
+from serializers.base import *
 import serializers.auxillary as auxillary
 from serializers.user import (
     user as User,
@@ -6,6 +7,7 @@ from serializers.user import (
 )
 from serializers.opportunity import (
     provider as OpportunityProvider,
+    fields as OpportunityFields,
     opportunity as Opportunity,
     tag as OpportunityTag,
     geo_tag as OpportunityGeoTag,

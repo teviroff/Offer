@@ -2,5 +2,7 @@ venv
 __pycache__
 .idea
 logs
+docker
 dbconfig.py
 testing.py
+tasks.md

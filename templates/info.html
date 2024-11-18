@@ -5,6 +5,7 @@
     <title>Title</title>
 </head>
 <body>
+    <h2>User Info</h2>
     <p>
         Name<br>
         <div>
@@ -38,19 +39,21 @@
             <p></p>
         </div>
     </p>
-
-<!--COUNTRY:-->
-<!--<select id="country">-->
-<!--    {% for country in countries %}-->
-<!--        <option value={{country}}>{{country}}</option>-->
-<!--    {% endfor %}-->
-<!--</select>-->
-<!--CITIES:-->
-<!--<select id="city">-->
-
-
-</select>
-<button id="submit_btn">Submit</button>
+    <button id="submit_btn">Submit</button>
+    <h2>CVs</h2>
+    {% for id, filename in cvs %}
+    <div cv_id="{{ id }}">
+        {{ filename }}
+        <button class="cv-delete">Delete</button>
+    </div>
+    {% endfor %}
+    <h3>Upload</h3>
+    <div>
+        <input type="file" id="cv-filefield">
+        <p></p>
+    </div>
+    <button id="cv-upload">Upload</button>
+    <button id="logout">Logout</button>
 </body>
-<script src="../scripts/userupdate.js"></script>
+<script src="../scripts/info.js"></script>
 </html>

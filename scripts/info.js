@@ -1,13 +1,8 @@
-function getCookie(name) {
-    let matches = document.cookie.match(new RegExp(
-        "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
-    ));
-    return matches ? decodeURIComponent(matches[1]) : undefined;
-}
-
 // const countrySelect = document.getElementById('country')
 // const citySelect = document.getElementById('city')
 const submitBtn = document.getElementById('submit_btn')
+const uploadButton = document.getElementById('cv-upload')
+const logoutButton = document.getElementById('logout')
 
 // updateCitySelect = () => {
 //     fetch("/getcities", {
@@ -44,13 +39,6 @@ const surnameField = document.getElementById('surnamefield')
 const birthdayField = document.getElementById('datefield')
 
 submitBtn.addEventListener('click', (e) => {
-    let user_id = getCookie('user_id')
-    if (user_id === undefined) {
-        document.location.href = '/login'
-        return
-    } else {
-        user_id = parseInt(user_id)
-    }
     let name = null
     if (nameField.value.length > 0)
         name = nameField.value
@@ -66,10 +54,9 @@ submitBtn.addEventListener('click', (e) => {
             year: parseInt(year)
         }
     }
-    fetch("/api/user/info", {
+    fetch("/info", {
         method: "PATCH",
         body: JSON.stringify({
-            user_id: user_id,
             name: name,
             surname: surname,
             birthday: birthday
@@ -79,11 +66,16 @@ submitBtn.addEventListener('click', (e) => {
         },
     })
     .then(async (response) => {
-        if (response.status === 200)
+        if (response.status === 200) {
+            alert('Successfully updated user info')
             return
+        }
         response_json = await response.json()
         Object.keys(response_json).forEach(key => {
-            if (key === 'name') {
+            if (key === 'api_key') {
+                document.location.href = '/cookie'
+                return
+            } else if (key === 'name') {
                 nameField.parentElement.childNodes[2].textContent = response_json[key][0]['message']
             } else if (key === 'surname') {
                 surnameField.parentElement.childNodes[2].textContent = response_json[key][0]['message']
@@ -92,5 +84,50 @@ submitBtn.addEventListener('click', (e) => {
                 // birthdayField.parentElement.childNodes[2].textContent = response_json[key]['message']
             }
         })
+    })
+})
+
+const CVField = document.getElementById('cv-filefield')
+
+uploadButton.addEventListener('click', (e) => {
+    if (CVField.files.length === 0) {
+        CVField.parentElement.childNodes[2].textContent = 'Select a file to upload'
+        return
+    }
+    let formData = new FormData()
+    formData.append('cv', CVField.files[0])
+    fetch("/info/cv", {
+        method: "POST",
+        body: formData
+    })
+    .then(async (response) => {
+        if (response.status === 200) {
+            alert('Successfully uploaded CV')
+            return
+        }
+        response_json = await response.json()
+        Object.keys(response_json).forEach(key => {
+            if (key === 'api_key') {
+                document.location.href = '/cookie'
+                return
+            }
+            // no errors here yet
+        })
+    })
+})
+
+deleteButtons = document.getElementsByClassName('cv-delete')
+
+//Array.from(deleteButtons).forEach((e) => {
+//    // ...
+//})
+
+logoutButton.addEventListener('click', (e) => {
+    fetch("/logout", {
+        method: "POST"
+    })
+    .then((response) => {
+        document.location.href = '/'
+        return
     })
 })

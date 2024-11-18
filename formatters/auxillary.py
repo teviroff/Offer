@@ -7,12 +7,12 @@ class Date(BaseSerializerFormatter):
         INVALID_DATE = 200
 
     @staticmethod
-    def append_root_error(error: PydanticError, errors: Result, root: int) -> None:
+    def append_root_error(error: PydanticError, errors: ErrorTrace, root: int) -> None:
         errors['type'] = Date.ErrorCode.INVALID_DATE
         errors['message'] = 'Invalid combination of year, month and day'
 
     @staticmethod
-    def transform_day_error(error: PydanticError) -> FormattedError | None:
+    def transform_day_error(error: PydanticError, _root: int) -> FormattedError | None:
         match error['type']:
             case 'missing':
                 return FieldErrorCode.MISSING, 'Missing required field'
@@ -22,7 +22,7 @@ class Date(BaseSerializerFormatter):
                 return FieldErrorCode.NOT_IN_RANGE, 'Day must be in range from 1 to 31'
 
     @staticmethod
-    def transform_month_error(error: PydanticError) -> FormattedError | None:
+    def transform_month_error(error: PydanticError, _root: int) -> FormattedError | None:
         match error['type']:
             case 'missing':
                 return FieldErrorCode.MISSING, 'Missing required field'
@@ -32,7 +32,7 @@ class Date(BaseSerializerFormatter):
                 return FieldErrorCode.NOT_IN_RANGE, 'Month must be in range from 1 to 12'
 
     @staticmethod
-    def transform_year_error(error: PydanticError) -> FormattedError | None:
+    def transform_year_error(error: PydanticError, _root: int) -> FormattedError | None:
         match error['type']:
             case 'missing':
                 return FieldErrorCode.MISSING, 'Missing required field'
@@ -43,7 +43,7 @@ class Date(BaseSerializerFormatter):
 
     serializer_error_appender = BaseSerializerErrorAppender(
         __root__=append_root_error,
-        day=append_serializer_field_error_factory('day', transformer=transform_day_error),
-        month=append_serializer_field_error_factory('month', transformer=transform_month_error),
-        year=append_serializer_field_error_factory('year', transformer=transform_year_error),
+        day=append_serializer_field_error_factory(transform_day_error),
+        month=append_serializer_field_error_factory(transform_month_error),
+        year=append_serializer_field_error_factory(transform_year_error),
     )

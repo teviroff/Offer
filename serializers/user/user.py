@@ -1,9 +1,13 @@
 from serializers.base import *
 from pydantic import field_validator
 from pydantic_core import PydanticCustomError
+from ipaddress import IPv4Address
 import re
 
-class Login(BaseModel):
+
+class Credentials(BaseModel):
+    """Model used for registration/login DB API methods."""
+
     model_config = {'extra': 'ignore'}
 
     email: Annotated[str, Field(max_length=50)]
@@ -20,11 +24,19 @@ class Login(BaseModel):
     @field_validator('password')
     @classmethod
     def password_regex(cls, password: str) -> str:
-        regex = re.compile(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\.\-@$!%*?&])[A-Za-z\d\.-@$!%*?&]*$')
+        regex = re.compile(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[.\-@$!%*?&])[A-Za-z\d.-@$!%*?&]*$')
         if not regex.match(password):
             raise PydanticCustomError('pattern_error', 'Input should be a valid password')
         return password
 
 
-class Create(Login):
-    api_key: OPTIONAL_API_KEY
+class LoginFields(Credentials):
+    """Model used in login handler. Should be transformed into 'Login' and passed to middleware."""
+
+    remember_me: Annotated[Annotated[bool, Field(strict=True)], Field(default=False)]
+
+class Login(LoginFields):
+    """Module with all required information about login attempt. Used only by middleware."""
+
+    ip: IPv4Address
+    port: Annotated[int, Field(strict=True, ge=0, lt=65536)]
