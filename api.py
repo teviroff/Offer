@@ -1,8 +1,9 @@
-from typing import Iterable
+from typing import Annotated, Iterable
 from enum import IntEnum
 
 from config import *
-from fastapi.responses import JSONResponse
+from fastapi import Path
+from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 import db as db
@@ -75,6 +76,15 @@ register_request_validation_error_handler(
     handler=default_request_validation_error_handler_factory(fmt.CreateUserFormatter.format_serializer_errors)
 )
 
+@app.get('/api/user/avatar/{user_id}')
+async def get_user_avatar(request: Request, user_id: Annotated[int, Path(ge=1)]):
+    with db.Session.begin() as session:
+        user = get_user_by_id(session, user_id)
+        if user is None:
+            return page_not_found_response(request)
+        avatar = user.get_avatar(db.minio_client)
+    return Response(avatar, media_type='image/png')
+
 @app.patch('/api/user/info')
 def update_user_info(request: ser.UserInfo.Update) -> JSONResponse:
     class ErrorCode(IntEnum):
@@ -101,6 +111,7 @@ register_request_validation_error_handler(
 #     ...
 #     return JSONResponse({})
 
+# TODO: return id
 @app.post('/api/private/opportunity-provider')
 def create_opportunity_provider(request: ser.OpportunityProvider.Create) -> JSONResponse:
     with db.Session.begin() as session:
@@ -109,6 +120,20 @@ def create_opportunity_provider(request: ser.OpportunityProvider.Create) -> JSON
             return get_developer_api_key_error_response()
         db.OpportunityProvider.create(session, request)
     return JSONResponse({})
+
+def get_opportunity_provider_by_id(session: Session, provider_id: ser.ID) -> db.OpportunityProvider | None:
+    """Get opportunity provider by id. Returns None if provider with provided id doesn't exist."""
+
+    return session.get(db.OpportunityProvider, provider_id)
+
+@app.get('/api/opportunity-provider/logo/{provider_id}')
+async def get_opportunity_provider_logo(request: Request, provider_id: Annotated[int, Path(ge=1)]):
+    with db.Session.begin() as session:
+        provider = get_opportunity_provider_by_id(session, provider_id)
+        if provider is None:
+            return page_not_found_response(request)
+        avatar = provider.get_avatar(db.minio_client)
+    return Response(avatar, media_type='image/png')
 
 register_request_validation_error_handler(
     '/api/private/opportunity-provider', 'POST',

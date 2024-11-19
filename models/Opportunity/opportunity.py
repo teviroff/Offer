@@ -2,6 +2,7 @@ from typing import Self, Union
 
 from sqlalchemy import String, ForeignKey
 from sqlalchemy.orm import Session, Mapped, mapped_column, relationship
+from minio import Minio, S3Error
 
 from utils import *
 from models.base import Base, MongoID, mongo_id
@@ -58,8 +59,7 @@ class Opportunity(Base):
                 error_code=CreateOpportunityErrorCode.INVALID_PROVIDER_ID,
                 error_message='Opportunity provider with given id doesn\'t exist',
             )
-        opportunity = Opportunity(name=fields.name, link=fields.link, provider=provider,
-                                  description=fields.description)
+        opportunity = Opportunity(name=fields.name, link=fields.link, provider=provider)
         if fields.fields is not None:
             fields = OpportunityFields.create(fields.fields)
             opportunity.fields = str(fields.id)
@@ -120,18 +120,27 @@ class Opportunity(Base):
         if len(tag_errors) > 0:
             return tag_errors
 
-    @classmethod
-    def get_dict(cls, session: Session, opportunity_id: int) -> dict | None:
-        opportunity: Opportunity | None = session.query(Opportunity).get(opportunity_id)
-        if opportunity is None:
-            return
+    def get_dict(self) -> dict:
         return {
-            'name': opportunity.name,
-            'provider': {'name': opportunity.provider.name},
-            'tags': [{'name': tag.name} for tag in opportunity.tags],
-            'geo_tags': [{'city_name': geo_tag.city.name} for geo_tag in opportunity.geo_tags],
-            'description': opportunity.description,
+            'name': self.name,
+            'provider_logo_url': f'/api/opportunity-provider/logo/{self.provider_id}',
+            'provider_name': self.provider.name,
+            'tags': [(tag.id, tag.name) for tag in self.tags],
+            'geo_tags': [(geo_tag.id, geo_tag.city.name) for geo_tag in self.geo_tags],
         }
+
+    def get_description(self, minio_client: Minio) -> bytes:
+        response = None
+        try:
+            response = minio_client.get_object('opportunity-description', f'{self.id}.md')
+            description = response.read()
+        except S3Error:
+            response = minio_client.get_object('opportunity-description', 'default.md')
+            description = response.read()
+        finally:
+            response.close()
+            response.release_conn()
+        return description
 
 
 # TODO: change schema, logo changes
@@ -148,6 +157,19 @@ class OpportunityProvider(Base):
         provider = OpportunityProvider(name=fields.name)
         session.add(provider)
         return provider
+
+    def get_avatar(self, minio_client: Minio) -> bytes:
+        response = None
+        try:
+            response = minio_client.get_object('opportunity-provider-logo', f'{self.id}.png')
+            avatar = response.read()
+        except S3Error:
+            response = minio_client.get_object('opportunity-provider-logo', 'default.png')
+            avatar = response.read()
+        finally:
+            response.close()
+            response.release_conn()
+        return avatar
 
     # TODO
     @classmethod

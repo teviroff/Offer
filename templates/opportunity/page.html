@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <h2>Opportunity</h2>
+    <div>
+        <h4>Name</h4>
+        <p>{{ name }}</p>
+    </div>
+    <div>
+        <h4>Provider</h4>
+        <img src="{{ provider_logo_url }}" style="max-width: 32px; max-height: 32px;">
+        <p>{{ provider_name }}</p>
+    </div>
+    <div>
+        <h4>Tags</h4>
+        <div id="tags-container">
+            {% for tag in tags %}
+            {{ tag|safe }}
+            {% endfor %}
+        </div>
+    </div>
+    <div>
+        <h4>Geo Tags</h4>
+        <div id="geotags-container">
+            {% for geotag in geo_tags %}
+            {{ geotag|safe }}
+            {% endfor %}
+        </div>
+    </div>
+    <div>
+        <h4>Description</h4>
+        <div id="description-container"></div>
+    </div>
+    <div>
+        <h4>Form</h4>
+        <div id="form-container"></div>
+    </div>
+</body>
+<script src="../scripts/opportunity.js"></script>
+</html>

@@ -7,6 +7,14 @@ from models.opportunity.opportunity import (
 )
 
 
+class GetOpportunityByIDFormatter:
+    """Convenience class with DB error message."""
+
+    @classmethod
+    def get_db_error(cls, *, code: int) -> ErrorTrace:
+        return {'opportunity_id': [{'type': code, 'message': 'Opportunity with provided id doesn\'t exist'}]}
+
+
 class CreateOpportunityFormatter(BaseSerializerFormatter, BaseDBFormatter):
     class ErrorCode(IntEnum):
         INVALID_PROVIDER_ID = 200
@@ -55,7 +63,8 @@ class AddOpportunityTagFormatter(BaseSerializerFormatter, BaseDBFormatter):
                 'Opportunity with provided id doesn\'t exist')
 
     @staticmethod
-    def append_invalid_tag_id_error(error: GenericError[AddOpportunityTagErrorCode, int], errors: ErrorTrace) -> None:
+    def append_invalid_tag_id_error(error: GenericError[AddOpportunityTagErrorCode, int], errors: ErrorTrace, _) \
+            -> None:
         if 'tag_ids' not in errors:
             errors['tag_ids'] = {}
         tag_index = str(error.context)
@@ -89,8 +98,8 @@ class AddOpportunityGeoTagFormatter(BaseSerializerFormatter, BaseDBFormatter):
                 'Opportunity with provided id doesn\'t exist')
 
     @staticmethod
-    def append_invalid_geo_tag_id_error(error: GenericError[AddOpportunityGeoTagErrorCode, int], errors: ErrorTrace) \
-            -> None:
+    def append_invalid_geo_tag_id_error(error: GenericError[AddOpportunityGeoTagErrorCode, int],
+                                        errors: ErrorTrace, _) -> None:
         if 'geo_tag_ids' not in errors:
             errors['geo_tag_ids'] = {}
         tag_index = str(error.context)

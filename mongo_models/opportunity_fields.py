@@ -27,6 +27,13 @@ class StringField(OpportunityField):
         return StringField(label=data.label, type=FieldType.String, is_required=data.is_required,
                            max_length=data.max_length)
 
+    def to_dict(self) -> dict:
+        return {
+            'label': self.label,
+            'is_requred': self.is_required,
+            'max_length': self.max_length,
+        }
+
 class RegexField(StringField):
     regex = mongo.StringField()
 
@@ -35,6 +42,14 @@ class RegexField(StringField):
         return RegexField(label=data.label, type=FieldType.Regex, is_required=data.is_required,
                           max_length=data.max_length, regex=data.regex)
 
+    def to_dict(self) -> dict:
+        return {
+            'label': self.label,
+            'is_requred': self.is_required,
+            'max_length': self.max_length,
+            'regex': self.regex,
+        }
+
 class ChoiceField(OpportunityField):
     choices = mongo.ListField(mongo.StringField())
 
@@ -42,6 +57,13 @@ class ChoiceField(OpportunityField):
     def create(cls, data: ser.OpportunityFields.ChoiceField) -> Self:
         return ChoiceField(label=data.label, type=FieldType.Choice, is_required=data.is_required,
                            choices=data.choices)
+
+    def to_dict(self) -> dict:
+        return {
+            'label': self.label,
+            'is_requred': self.is_required,
+            'choices': self.choices,
+        }
 
 
 class OpportunityFields(mongo.Document):

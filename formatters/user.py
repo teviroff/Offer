@@ -109,43 +109,31 @@ class UpdateUserAvatarFormatter(BaseSerializerFormatter, BaseDBFormatter):
     })
 
 
-class AddCVFormatter(BaseSerializerFormatter, BaseDBFormatter):
-    class ErrorCode(IntEnum):
-        FILE_DOESNT_EXIST = 200
+class GetCVByIDFormatter:
+    """Convenience class with DB error message."""
 
-    @staticmethod
-    def transform_file_doesnt_exist_error(*_) -> FormattedError:
-        return AddCVFormatter.ErrorCode.FILE_DOESNT_EXIST, 'File with provided name doesn\'t exist'
-
-    db_error_appender = BaseDBErrorAppender({
-        AddCVErrorCode.FILE_DOESNT_EXIST:
-            append_db_field_error_factory(field_name='cv_filename',
-                                          transformer=transform_file_doesnt_exist_error),
-    })
+    @classmethod
+    def get_db_error(cls, *, code: int) -> ErrorTrace:
+        return {'cv_id': [{'type': code, 'message': 'CV with provided id doesn\'t exist'}]}
 
 
-class DeleteUserCVFormatter(BaseSerializerFormatter, BaseDBFormatter):
-    class ErrorCode(IntEnum):
-        INVALID_CV_ID = 200
+class RenameCVFormatter(BaseSerializerFormatter):
+    serializer_error_appender = BaseSerializerErrorAppender(
+        cv_id=append_serializer_field_error_factory(transform_id_error_factory('CV id')),
+        name=append_serializer_field_error_factory(transform_str_error_factory('CV name', min_length=1, max_length=50)),
+    )
 
+    @classmethod
+    def get_insufficient_permissions_error(cls) -> ErrorTrace:
+        return {'cv_id': [{'type': FieldErrorCode.INSUFFICIENT_PERMISSIONS,
+                           'message': 'Can\'t rename CV with provided id'}]}
+
+class DeleteCVFormatter(BaseSerializerFormatter):
     serializer_error_appender = APISerializerErrorAppender(
         cv_id=append_serializer_field_error_factory(transform_id_error_factory('CV id'))
     )
 
-    @staticmethod
-    def transform_invalid_cv_id_error(*_) -> FormattedError:
-        return DeleteUserCVFormatter.ErrorCode.INVALID_CV_ID, 'CV with provided id doesn\'t exist'
-
-    @staticmethod
-    def transform_insufficient_permissions_error(*_) -> FormattedError:
-        return FieldErrorCode.INSUFFICIENT_PERMISSIONS, 'Can\'t delete this user CV with provided API key'
-
-    db_error_appender = BaseDBErrorAppender({
-        DeleteCVErrorCode.INVALID_API_KEY:
-            append_db_field_error_factory(field_name='api_key',
-                                          transformer=APISerializerErrorAppender.transform_invalid_api_key_error),
-        DeleteCVErrorCode.INVALID_CV_ID:
-            append_db_field_error_factory('cv_id', transformer=transform_invalid_cv_id_error),
-        DeleteCVErrorCode.INSUFFICIENT_PERMISSIONS:
-            append_db_field_error_factory('api_key', transformer=transform_insufficient_permissions_error),
-    })
+    @classmethod
+    def get_insufficient_permissions_error(cls) -> ErrorTrace:
+        return {'cv_id': [{'type': FieldErrorCode.INSUFFICIENT_PERMISSIONS,
+                           'message': 'Can\'t delete CV with provided id'}]}

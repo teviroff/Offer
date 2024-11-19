@@ -11,7 +11,6 @@ class CreateFields(BaseModel):
     name: Annotated[str, Field(min_length=1, max_length=50)]
     link: Annotated[HttpUrl | None, Field(default=None)]
     provider_id: ID
-    description: Annotated[str, Field(max_length=250)]
     fields: Annotated[fields.FormFields | None, Field(default=None)]
 
     @field_validator('link')

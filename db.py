@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker
 from mongoengine import connect
 from minio import Minio
 
-from models.base import Base
+from models.base import Base, File
 from models.auxillary.address import Country, City
 from models.auxillary.phone_number import PhoneNumber
 from models.user import (
@@ -12,6 +12,9 @@ from models.user import (
 from models.opportunity.opportunity import (
     Opportunity, OpportunityProvider, OpportunityTag, OpportunityGeoTag,
     OpportunityToTag, OpportunityToGeoTag, OpportunityCard
+)
+from mongo_models.opportunity_fields import (
+    OpportunityFields, FieldType as OpportunityFieldType,
 )
 from models.opportunity.response import OpportunityResponse, ResponseStatus
 

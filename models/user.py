@@ -1,6 +1,5 @@
-from typing import Self, Optional, BinaryIO
+from typing import Self, Optional
 from datetime import datetime
-from uuid import UUID, uuid4
 from ipaddress import IPv4Address
 
 from sqlalchemy.dialects.postgresql import (
@@ -179,9 +178,25 @@ class User(Base):
             'name': self.user_info.name,
             'surname': self.user_info.surname,
             'birthday': self.user_info.birthday.strftime('%Y-%m-%d') if self.user_info.birthday is not None else None,
-            # TODO: city, phone number, avatar
-            'cvs': [(cv.id, cv.filename) for cv in self.user_info.cvs],
+            # TODO: city, phone number
+            'avatar_url': f'/api/user/avatar/{self.id}'
         }
+
+    def get_avatar(self, minio_client: Minio) -> bytes:
+        response = None
+        try:
+            response = minio_client.get_object('user-avatar', f'{self.id}.png')
+            avatar = response.read()
+        except S3Error:
+            response = minio_client.get_object('user-avatar', 'default.png')
+            avatar = response.read()
+        finally:
+            response.close()
+            response.release_conn()
+        return avatar
+
+    def get_cvs(self) -> list[tuple[int, str]]:
+        return [(cv.id, cv.name) for cv in self.user_info.cvs]
 
 
 class UpdateUserInfoErrorCode(IntEnum):
@@ -266,19 +281,19 @@ class CV(Base):
     user_info: Mapped['UserInfo'] = relationship(back_populates='cvs')
 
     @classmethod
-    def add(cls, session: Session, minio_client: Minio, user: User, file: File, name: str) -> Self:
+    def add(cls, session: Session, minio_client: Minio, user: User, file: File, name: ser.CV.Name) -> Self:
         """Method for creating CVs. 'name' is the temporary name, which can be changes later."""
 
-        cv = CV(user_info=user.user_info, name=name[:50])
+        cv = CV(user_info=user.user_info, name=name.name)
         session.add(cv)
         session.flush([cv])
         minio_client.put_object('user-cv', f'{cv.id}.pdf', file.stream, file.size)
         return cv
 
-    def change_name(self, new_name: str) -> None:
+    def rename(self, name: ser.CV.Name) -> None:
         """Method for changing the name of an existing CV."""
 
-        self.name = new_name
+        self.name = name.name
 
     def delete(self, session: Session, minio_client: Minio) -> None:
         try:

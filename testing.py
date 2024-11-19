@@ -12,6 +12,8 @@
 #     level=logging.DEBUG
 # )
 
-from serializers.auxillary import RelativeURL
+from fastapi.templating import Jinja2Templates
 
-print(RelativeURL(url='/?redirect=%2Fother%2Fpath%2F%3Fzxc=true').unescaped())
+templates = Jinja2Templates(directory='templates')
+
+print(templates.get_template('info/cv.html').render())

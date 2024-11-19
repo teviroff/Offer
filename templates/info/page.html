@@ -6,6 +6,15 @@
 </head>
 <body>
     <h2>User Info</h2>
+    <div>
+        <p>Avatar</p>
+        <img src="{{ avatar_url }}" style="max-width: 32px; max-height: 32px;">
+    </div>
+    <div>
+        <input type="file" id="avatar-field" accept=".png">
+        <p></p>
+    </div>
+    <button id="avatar-upload">Update</button>
     <p>
         Name<br>
         <div>
@@ -40,19 +49,16 @@
         </div>
     </p>
     <button id="submit_btn">Submit</button>
-    <h2>CVs</h2>
-    {% for id, filename in cvs %}
-    <div cv_id="{{ id }}">
-        {{ filename }}
-        <button class="cv-delete">Delete</button>
+    <div>
+        <h2>CVs</h2>
+        <div id="cvs-container"></div>
     </div>
-    {% endfor %}
     <h3>Upload</h3>
     <div>
-        <input type="file" id="cv-filefield">
+        <input type="file" id="cv-filefield" accept=".pdf">
         <p></p>
     </div>
-    <button id="cv-upload">Upload</button>
+    <button id="cv-upload">Upload</button> <br>
     <button id="logout">Logout</button>
 </body>
 <script src="../scripts/info.js"></script>
