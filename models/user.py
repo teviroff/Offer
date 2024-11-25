@@ -1,9 +1,9 @@
 from typing import Self, Optional
-from datetime import datetime
+from datetime import datetime, UTC
 from ipaddress import IPv4Address
 
 from sqlalchemy.dialects.postgresql import (
-    INET, INTEGER,
+    INET, INTEGER, TIMESTAMP
 )
 from minio import Minio
 from minio.error import S3Error
@@ -22,7 +22,7 @@ class PersonalAPIKey(Base):
     ip: Mapped[IPv4Address] = mapped_column(INET, primary_key=True)
     port: Mapped[int] = mapped_column(INTEGER, primary_key=True)
     key: Mapped[str] = mapped_column(String(64), unique=True)
-    expiry_date: Mapped[datetime] = mapped_column()
+    expiry_date: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True))
 
     user: Mapped['User'] = relationship(back_populates='personal_api_keys')
 
@@ -57,7 +57,7 @@ class PersonalAPIKey(Base):
         api_key: PersonalAPIKey | None = session.query(PersonalAPIKey).filter(PersonalAPIKey.key == key).first()
         if api_key is None:
             return
-        if api_key.expiry_date <= datetime.now():
+        if api_key.expiry_date <= datetime.now(UTC):
             session.delete(api_key)
             return
         return api_key

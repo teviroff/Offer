@@ -104,6 +104,9 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(async (response) => {
             if (response.status === 200) {
                 alert('Successfully updated avatar, reload page to see changes')
+                temp = avatarField.src
+                avatarField.src = "penis.png"
+                alert("penis")
                 return
             }
             response_json = await response.json()
