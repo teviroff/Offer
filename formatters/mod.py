@@ -1,11 +1,14 @@
-import formatters.base as base
+from formatters.base import *
 from formatters.user import (
+    GetAPIKeyFormatter, GetUserByIDFormatter, GetCVByIDFormatter,
     CreateUserFormatter, LoginFormatter,
-    UpdateUserInfoFormatter, DeleteUserCVFormatter
+    UpdateUserInfoFormatter, UpdateUserAvatarFormatter,
+    RenameCVFormatter, DeleteCVFormatter,
 )
 from formatters.opportunity.provider import CreateProviderFormatter
 from formatters.opportunity.opportunity import (
-    CreateOpportunityFormatter, AddOpportunityTagFormatter,
+    GetOpportunityByIDFormatter, CreateOpportunityFormatter,
+    AddOpportunityTagFormatter, AddOpportunityGeoTagFormatter,
 )
 from formatters.opportunity.tag import CreateOpportunityTagFormatter
 from formatters.opportunity.geotag import CreateOpportunityGeoTagFormatter

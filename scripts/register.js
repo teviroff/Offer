@@ -5,7 +5,7 @@ const loginBtn = document.getElementById('login_form_btn')
 loginBtn.addEventListener('click', (e) => {
     emailField.parentElement.childNodes[2].textContent = ''
     passwordField.parentElement.childNodes[2].textContent = ''
-    fetch('/api/user', {
+    fetch('/api/private/user', {
         method: 'POST',
         body: JSON.stringify({
             email: emailField.value,

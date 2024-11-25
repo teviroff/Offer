@@ -1,10 +1,15 @@
 from serializers.base import *
 
-class Create(BaseModel):
-    ...
 
-class Delete(BaseModel):
+class Id(BaseModel):
     model_config = {'extra': 'ignore'}
 
-    api_key: API_KEY
     cv_id: ID
+
+class Name(BaseModel):
+    model_config = {'extra': 'ignore'}
+
+    name: Annotated[str, Field(min_length=1, max_length=50)]
+
+class Rename(Id, Name):
+    pass

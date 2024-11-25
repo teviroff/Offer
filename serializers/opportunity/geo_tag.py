@@ -1,8 +1,10 @@
 from serializers.base import *
 
 
-class Create(BaseModel):
+class CreateFields(BaseModel):
     model_config = {'extra': 'ignore'}
 
-    api_key: API_KEY
     city_id: ID
+
+class Create(CreateFields):
+    api_key: API_KEY

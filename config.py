@@ -4,6 +4,7 @@ from datetime import datetime
 
 # import ui
 # import api
+LOCAL: bool = True
 
 LOG_FOLDER = datetime.now().strftime('%d.%m.%Y')
 LOG_FILENAME = f'{datetime.now().timestamp()}'
@@ -36,8 +37,11 @@ from fastapi.responses import Response
 from fastapi.exceptions import RequestValidationError
 
 
+def page_access_forbidden(request: Request):
+    return templates.TemplateResponse(request, 'errors/403.html', status_code=403)
+
 def page_not_found_response(request: Request):
-    return templates.TemplateResponse('error404.html', status_code=404, context={'request': request})
+    return templates.TemplateResponse(request, 'errors/404.html', status_code=404)
 
 
 type RequestValidationErrorHandler = Callable[[RequestValidationError], Response]

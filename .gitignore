@@ -3,5 +3,7 @@ __pycache__
 .idea
 logs
 pgdata
+docker
 dbconfig.py
 testing.py
+tasks.md
