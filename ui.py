@@ -360,8 +360,8 @@ async def get_opportunity_form(request: Request, opportunity_id: Annotated[int, 
         db.OpportunityFieldType.Regex: 'opportunity/fields/regex.html',
         db.OpportunityFieldType.Choice: 'opportunity/fields/choice.html',
     }
-    for field in fields.fields:
-        content += templates.get_template(field_type_to_template[field.type]).render(**field.to_dict())
+    for name, field in fields.fields.items():
+        content += templates.get_template(field_type_to_template[field.type]).render(**field.to_dict(), name=name)
     return HTMLResponse(content)
 
 # carddata = {
