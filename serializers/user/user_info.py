@@ -1,5 +1,3 @@
-from pydantic import UUID4
-
 from serializers.base import *
 import serializers.auxillary as _
 

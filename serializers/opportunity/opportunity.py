@@ -39,21 +39,11 @@ class AddTags(BaseModel):
 
     tag_ids: list[ID]
 
-class AddTagsQueryParameters(BaseModel):
-    model_config = {'extra': 'ignore'}
 
-    api_key: API_KEY
-    opportunity_id: ID
-
-
-class AddGeoTagsFields(BaseModel):
+class AddGeoTags(BaseModel):
     model_config = {'extra': 'ignore'}
 
     geo_tag_ids: list[ID]
-
-class AddGeoTags(AddGeoTagsFields):
-    api_key: API_KEY
-    opportunity_id: ID
 
 
 class UpdateFormSubmitMethod(BaseModel):

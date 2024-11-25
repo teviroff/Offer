@@ -46,7 +46,7 @@ class Opportunity(Base):
     responses: Mapped[list['response.OpportunityResponse']] = relationship(back_populates='opportunity')
 
     @classmethod
-    def create(cls, session: Session, fields: ser.Opportunity.CreateFields) \
+    def create(cls, session: Session, fields: ser.Opportunity.Create) \
             -> Self | GenericError[CreateOpportunityErrorCode]:
         provider: OpportunityProvider | None = session.query(OpportunityProvider).get(fields.provider_id)
         if provider is None:
@@ -69,7 +69,7 @@ class Opportunity(Base):
             -> list[Self] | list[GenericError[FilterOpportunityErrorCode]]:
         ...
 
-    def add_tags(self, session: Session, fields: ser.Opportunity.AddTagsFields) \
+    def add_tags(self, session: Session, fields: ser.Opportunity.AddTags) \
             -> None | list[GenericError[AddOpportunityTagErrorCode, int | None]]:
         tag_errors: list[GenericError[AddOpportunityTagErrorCode, int]] = []
         for i, tag_id in enumerate(fields.tag_ids):
@@ -86,7 +86,7 @@ class Opportunity(Base):
         if len(tag_errors) > 0:
             return tag_errors
 
-    def add_geo_tags(self, session: Session, fields: ser.Opportunity.AddGeoTagsFields) \
+    def add_geo_tags(self, session: Session, fields: ser.Opportunity.AddGeoTags) \
             -> None | list[GenericError[AddOpportunityGeoTagErrorCode, int | None]]:
         tag_errors: list[GenericError[AddOpportunityGeoTagErrorCode, int]] = []
         for i, tag_id in enumerate(fields.geo_tag_ids):
@@ -142,7 +142,7 @@ class OpportunityProvider(Base):
     opportunities: Mapped[list['Opportunity']] = relationship(back_populates='provider')
 
     @classmethod
-    def create(cls, session: Session, fields: ser.OpportunityProvider.CreateFields) -> Self:
+    def create(cls, session: Session, fields: ser.OpportunityProvider.Create) -> Self:
         provider = OpportunityProvider(name=fields.name)
         session.add(provider)
         return provider
@@ -178,7 +178,7 @@ class OpportunityTag(Base):
     opportunities: Mapped[list['Opportunity']] = relationship(secondary='opportunity_to_tag', back_populates='tags')
 
     @classmethod
-    def create(cls, session: Session, fields: ser.OpportunityTag.CreateFields) \
+    def create(cls, session: Session, fields: ser.OpportunityTag.Create) \
             -> Self | GenericError[CreateOpportunityTagErrorCode]:
         tag = session.query(OpportunityTag).filter(OpportunityTag.name == fields.name).first()
         if tag is not None:
@@ -207,7 +207,7 @@ class OpportunityGeoTag(Base):
                                                               back_populates='geo_tags')
 
     @classmethod
-    def create(cls, session: Session, fields: ser.OpportunityGeoTag.CreateFields) \
+    def create(cls, session: Session, fields: ser.OpportunityGeoTag.Create) \
             -> Self | GenericError[CreateOpportunityGeoTagErrorCode]:
         city: City | None = session.query(City).get(fields.city_id)
         if city is None:
