@@ -5,7 +5,7 @@ from serializers.base import *
 import serializers.opportunity.form as form
 
 
-class CreateFields(BaseModel):
+class Create(BaseModel):
     model_config = {'extra': 'ignore'}
 
     name: Annotated[str, Field(min_length=1, max_length=50)]
@@ -18,10 +18,6 @@ class CreateFields(BaseModel):
         if len(link) > 120:
             raise PydanticCustomError('string_too_long', 'Opportunity URL can contain at most 120 characters')
         return link
-
-class Create(CreateFields):
-    api_key: API_KEY
-
 
 class QueryParameters(BaseModel):
     model_config = {'extra': 'ignore'}
@@ -38,12 +34,14 @@ class Filter(BaseModel):
     geo_tag_ids: list[ID]
 
 
-class AddTagsFields(BaseModel):
+class AddTags(BaseModel):
     model_config = {'extra': 'ignore'}
 
     tag_ids: list[ID]
 
-class AddTags(AddTagsFields):
+class AddTagsQueryParameters(BaseModel):
+    model_config = {'extra': 'ignore'}
+
     api_key: API_KEY
     opportunity_id: ID
 

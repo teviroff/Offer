@@ -47,3 +47,4 @@ class QueryParameters(BaseModel):
 
     api_key: API_KEY
     user_id: ID
+

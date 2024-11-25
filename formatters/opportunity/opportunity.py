@@ -18,12 +18,15 @@ class CreateOpportunityFormatter(BaseSerializerFormatter, BaseDBFormatter):
     class ErrorCode(IntEnum):
         INVALID_PROVIDER_ID = 200
 
-    serializer_error_appender = APISerializerErrorAppender(
-        name=append_serializer_field_error_factory(transform_str_error_factory('Opportunity name', min_length=1,
-                                                                               max_length=50)),
-        link=append_serializer_field_error_factory(transform_http_url_error_factory('Opportunity link',
-                                                                                    max_length=120)),
-        provider_id=append_serializer_field_error_factory(transform_id_error_factory('Opportunity provider id')),
+    serializer_error_appender = RootSerializerErrorAppender(
+        query=APISerializerErrorAppender().append_error,
+        body=BaseSerializerErrorAppender(
+            name=append_serializer_field_error_factory(transform_str_error_factory(
+                'Opportunity name', min_length=1, max_length=50)),
+            link=append_serializer_field_error_factory(transform_http_url_error_factory(
+                'Opportunity link', max_length=120)),
+            provider_id=append_serializer_field_error_factory(transform_id_error_factory('Opportunity provider id')),
+        ).append_error,
     )
 
     @staticmethod
@@ -42,12 +45,16 @@ class AddOpportunityTagFormatter(BaseSerializerFormatter, BaseDBFormatter):
         INVALID_OPPORTUNITY_ID = 200
         INVALID_TAG_ID = 201
 
-    serializer_error_appender = APISerializerErrorAppender(
-        opportunity_id=append_serializer_field_error_factory(transform_id_error_factory('Opportunity id')),
-        tag_ids=append_serializer_list_error_factory(
-            transformer=transform_list_error_factory('Tag ids'),
-            element_error_appender=append_serializer_field_error_factory(transform_id_error_factory('Tag id')),
-        ),
+    serializer_error_appender = RootSerializerErrorAppender (
+        query=APISerializerErrorAppender(
+            opportunity_id=append_serializer_field_error_factory(transform_id_error_factory('Opportunity id')),
+        ).append_error,
+        body=BaseSerializerErrorAppender(
+            tag_ids=append_serializer_list_error_factory(
+                transformer=transform_list_error_factory('Tag ids'),
+                element_error_appender=append_serializer_field_error_factory(transform_id_error_factory('Tag id')),
+            ),
+        ).append_error,
     )
 
     @staticmethod
