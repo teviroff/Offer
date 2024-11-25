@@ -179,7 +179,7 @@ def user_info(request: Request):
     return templates.TemplateResponse(request, 'info/page.html', context=info)
 
 @app.patch('/me')
-async def user_info_update_handler(request: Request, fields: ser.UserInfo.UpdateFields) -> JSONResponse:
+async def user_info_update_handler(request: Request, fields: ser.UserInfo.Update) -> JSONResponse:
     api_key = get_api_key_model(request)
     if not isinstance(api_key, ser.APIKey):
         return get_api_key_error_json(api_key)
@@ -351,10 +351,7 @@ async def get_opportunity_form(request: Request, opportunity_id: Annotated[int, 
         opportunity = get_opportunity_by_id(session, opportunity_id)
         if opportunity is None:
             return page_not_found_response(request)
-        if opportunity.fields is None:
-            fields = None
-        else:
-            fields: db.OpportunityForm | None = db.OpportunityForm.objects(id=opportunity.fields).first()
+        fields = opportunity.get_form()
     if fields is None:
         return HTMLResponse()
     content = ''

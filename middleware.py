@@ -4,7 +4,6 @@
 from datetime import datetime, timedelta, UTC
 
 from sqlalchemy.orm import Session
-from minio import Minio
 
 import db as db
 import serializers.mod as ser
@@ -31,7 +30,7 @@ def authorize_user(session: Session, request: ser.User.Login) -> db.PersonalAPIK
     expiry_date = datetime.now(UTC) + (timedelta(days=365) if request.remember_me else timedelta(hours=2))
     return db.PersonalAPIKey.generate(session, user, request.ip, request.port, expiry_date)
 
-def update_user_info(session: Session, user: db.User, fields: ser.UserInfo.UpdateFields) -> None:
+def update_user_info(session: Session, user: db.User, fields: ser.UserInfo.Update) -> None:
     """Function for updating regular user info. Can't fail in current implementation."""
 
     user.user_info.update(session, fields)

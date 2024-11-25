@@ -8,16 +8,24 @@ import serializers.mod as ser
 
 class SubmitMethodType(StrEnum):
     Noop = 'noop'
+    YandexForms = 'yandex_forms'
 
 class SubmitMethod(mongo.EmbeddedDocument):
     meta = {'allow_inheritance': True}
 
-    type: mongo.EnumField(SubmitMethodType)
+    type = mongo.EnumField(SubmitMethodType)
 
 class NoopSubmitMethod(SubmitMethod):
     @classmethod
     def create(cls) -> Self:
         return NoopSubmitMethod(type=SubmitMethodType.Noop)
+
+class YandexFormsSubmitMethod(SubmitMethod):
+    url = mongo.URLField()
+
+    @classmethod
+    def create(cls, data: ser.OpportunityForm.YandexFormsSubmitMethod) -> Self:
+        return YandexFormsSubmitMethod(type=SubmitMethodType.YandexForms, url=str(data.url))
 
 
 class FieldType(StrEnum):
@@ -82,14 +90,16 @@ class ChoiceField(OpportunityField):
 
 class OpportunityForm(mongo.Document):
     id = mongo.IntField(primary_key=True)
-    submit = mongo.EmbeddedDocument(SubmitMethod)
-    fields = mongo.EmbeddedDocumentListField(OpportunityField)
+    submit_method = mongo.EmbeddedDocumentField(SubmitMethod)
+    fields = mongo.MapField(mongo.EmbeddedDocumentField(OpportunityField))
 
     @classmethod
     def create_submit(cls, data: ser.OpportunityForm.SubmitMethod) -> SubmitMethod:
         match data.type:
             case 'noop':
                 return NoopSubmitMethod.create()
+            case 'yandex_forms':
+                return YandexFormsSubmitMethod.create(data)
         raise ValueError(f'Unhandled submit method: {data.type}')
 
     @classmethod
@@ -104,15 +114,28 @@ class OpportunityForm(mongo.Document):
         raise ValueError(f'Unhandled field type: {data.type}')
 
     @classmethod
-    def create_fields(cls, fields: ser.OpportunityForm.FormFields) -> list[OpportunityField]:
-        return [cls.create_field(field) for field in fields]
+    def create_fields(cls, fields: ser.OpportunityForm.FormFields) -> dict[str, OpportunityField]:
+        return {name: cls.create_field(field) for name, field in fields.items()}
 
     @classmethod
-    def create(cls, *, submit: ser.OpportunityForm.SubmitMethod | None = None, fields: ser.OpportunityForm.FormFields):
-        self = OpportunityForm(fields=cls.create_fields(fields))
+    def create(cls, *, opportunity_id: int, submit: ser.OpportunityForm.SubmitMethod | None = None,
+               fields: ser.OpportunityForm.FormFields) -> Self:
+        self = OpportunityForm(id=opportunity_id, fields=cls.create_fields(fields))
         if submit is None:
-            submit = NoopSubmitMethod.create()
+            self.submit_method = NoopSubmitMethod.create()
         else:
-            submit = cls.create_submit(submit)
+            self.submit_method = cls.create_submit(submit)
         self.save()
         return self
+
+    def update_submit_method(self, submit: ser.OpportunityForm.SubmitMethod) -> None:
+        """Method for updating form submit method. Can't error in current implementation."""
+
+        self.submit_method = self.create_submit(submit)
+        self.save()
+
+    def update_fields(self, fields: ser.OpportunityForm.FormFields) -> None:
+        """Method for updating form fields. Can't error in current implementation."""
+
+        self.fields = self.create_fields(fields)
+        self.save()

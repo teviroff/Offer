@@ -159,6 +159,25 @@ def append_serializer_list_error_factory(
 
     return append_fn
 
+def append_serializer_dict_error_factory(
+    transformer: SerializerErrorTransformer, element_error_appender: SerializerErrorAppender
+) -> SerializerErrorAppender:
+    """Default dictionary field serializer error appender factory."""
+
+    def append_fn(error: PydanticError, errors: ErrorTrace, root: int) -> None:
+        if len(error['loc']) == root + 2:  # Excludes possibility for inner errors
+            e = transformer(error, root)
+            if e is None:
+                raise ValueError(f'Unhandled serialization error: {error}')
+            errors[get_serializer_error_field_name(error, root)] = [{'type': e[0], 'message': e[1]}]
+            return
+        dict_field_name = get_serializer_error_field_name(error, root)
+        if dict_field_name not in errors:
+            errors[dict_field_name] = {}
+        element_error_appender(error, errors[dict_field_name], root + 1)
+
+    return append_fn
+
 def append_db_field_error_factory(
     field_name: str, *,
     transformer: DBErrorTransformer
@@ -277,6 +296,26 @@ def transform_list_error_factory(human_list_field_name: str, *, min_length: int 
 
     return transform_fn
 
+def transform_dict_error_facory(human_dict_field_name: str, *, min_length: int | None = None,
+                                max_length: int | None = None) -> SerializerErrorTransformer:
+    """Default dictionary field error transformer factor. If your field is named 'fields', then 'hunam_dict_field_name'
+       should be 'Fields'."""
+
+    def transform_fn(error: PydanticError, _root: int) -> FormattedError | None:
+        match error['type']:
+            case 'missing':
+                return FieldErrorCode.MISSING, 'Missing required field'
+            case 'dict_type':
+                return FieldErrorCode.WRONG_TYPE, f'{human_dict_field_name} must be a dictionary'
+            case 'too_short':
+                return (FieldErrorCode.LENGTH_NOT_IN_RANGE, f'{human_dict_field_name} must contain at least '
+                                                            f'{min_length} item(s)')
+            case 'too_long':
+                return (FieldErrorCode.LENGTH_NOT_IN_RANGE, f'{human_dict_field_name} can contain at most {max_length} '
+                                                            f'item(s)')
+
+    return transform_fn
+
 class append_tagged_union_error:
     def __init__(self, root_error_transformer: SerializerErrorTransformer):
         self.__root__ = root_error_transformer
@@ -309,6 +348,8 @@ def transform_tagged_union_error_factory(human_union_field_name: str) -> Seriali
         match error['type']:
             case 'missing':
                 return FieldErrorCode.MISSING, 'Missing required field'
+            case 'model_attributes_type':
+                return FieldErrorCode.WRONG_TYPE, f'{human_union_field_name} must be a dictionary'
             case 'union_tag_not_found':
                 return (FieldErrorCode.MISSING_DISCRIMINATOR, f'{human_union_field_name} misses a discriminator field '
                                                               f'{error["ctx"]["discriminator"]}')

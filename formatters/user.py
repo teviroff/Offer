@@ -76,18 +76,6 @@ class LoginFormatter(BaseSerializerFormatter):
 
 
 class UpdateUserInfoFormatter(BaseSerializerFormatter):
-    # serializer_error_appender = APISerializerErrorAppender(
-    #     user_id=append_serializer_field_error_factory(transform_id_error_factory('User id')),
-    #     name=append_serializer_field_error_factory(transform_str_error_factory('Name', min_length=1, max_length=50)),
-    #     surname=append_serializer_field_error_factory(transform_str_error_factory('Surname', min_length=1,
-    #                                                                               max_length=50)),
-    #     birthday=append_nested_model_error_factory(
-    #         transformer=transform_nested_model_error_factory('Birthday'),
-    #         model_error_appender=Date.append_serializer_error,
-    #     ),
-    #     city_id=append_serializer_field_error_factory(transform_id_error_factory('City id')),
-    # )
-
     serializer_error_appender = RootSerializerErrorAppender(
         query=APISerializerErrorAppender(
             user_id=append_serializer_field_error_factory(transform_id_error_factory('User id')),

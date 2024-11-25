@@ -1,5 +1,4 @@
 from formatters.base import *
-from formatters.opportunity.fields import FormFieldsFormatter
 from utils import *
 from models.opportunity.opportunity import (
     CreateOpportunityErrorCode, AddOpportunityTagErrorCode,
@@ -25,12 +24,6 @@ class CreateOpportunityFormatter(BaseSerializerFormatter, BaseDBFormatter):
         link=append_serializer_field_error_factory(transform_http_url_error_factory('Opportunity link',
                                                                                     max_length=120)),
         provider_id=append_serializer_field_error_factory(transform_id_error_factory('Opportunity provider id')),
-        description=append_serializer_field_error_factory(transform_str_error_factory('Opportunity description',
-                                                                                      min_length=0, max_length=250)),
-        fields=append_nested_model_error_factory(
-            transformer=transform_nested_model_error_factory('Form fields'),
-            model_error_appender=FormFieldsFormatter.append_serializer_error,
-        ),
     )
 
     @staticmethod

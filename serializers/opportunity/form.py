@@ -1,7 +1,7 @@
 from typing import Literal
 import re
 
-from pydantic import field_validator
+from pydantic import field_validator, HttpUrl
 from pydantic_core import PydanticCustomError
 
 from serializers.base import *
@@ -13,7 +13,18 @@ class SubmitMethodBase(BaseModel):
 class NoopSubmitMethod(SubmitMethodBase):
     type: Literal['noop']
 
-type SubmitMethod = Annotated[NoopSubmitMethod, Field(discriminator='type')]
+class YandexFormsSubmitMethod(SubmitMethodBase):
+    type: Literal['yandex_forms']
+    url: HttpUrl
+
+    @field_validator('url', mode='after')
+    @classmethod
+    def validate_host(cls, url: HttpUrl) -> HttpUrl:
+        if url.host not in ['forms.yandex.ru']:
+            raise PydanticCustomError('invalid_host', 'Invalid URL host')
+        return url
+
+type SubmitMethod = Annotated[NoopSubmitMethod | YandexFormsSubmitMethod, Field(discriminator='type')]
 
 
 class FormFieldBase(BaseModel):
@@ -44,4 +55,4 @@ class ChoiceField(FormFieldBase):
     choices: Annotated[list[str], Field(min_length=1)]
 
 type FormField = Annotated[StringField | RegexField | ChoiceField, Field(discriminator='type')]
-type FormFields = Annotated[list[FormField], Field(min_length=1)]
+type FormFields = Annotated[dict[str, FormField], Field(min_length=1)]

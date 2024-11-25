@@ -245,7 +245,7 @@ class UserInfo(Base):
         ('city_id', __update_city),
     )
 
-    def update(self, session: Session, fields: ser.UserInfo.UpdateFields) -> None:
+    def update(self, session: Session, fields: ser.UserInfo.Update) -> None:
         for field, handler in UserInfo.__update_field_handlers:
             if getattr(fields, field) is None:
                 continue

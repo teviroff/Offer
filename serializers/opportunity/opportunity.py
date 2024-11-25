@@ -58,10 +58,10 @@ class AddGeoTags(AddGeoTagsFields):
     opportunity_id: ID
 
 
-class UpdateFormSubmit(BaseModel):
+class UpdateFormSubmitMethod(BaseModel):
     model_config = {'extra': 'ignore'}
 
-    submit: form.SubmitMethod
+    submit_method: form.SubmitMethod
 
 
 class UpdateFormFields(BaseModel):
