@@ -174,8 +174,8 @@ def get_opportunity_by_id(session: Session, opportunity_id: ser.ID) -> db.Opport
 
 @app.post('/api/private/opportunity/tags')
 def add_opportunity_tags(
-        query: Annotated[sopp.AddTagsQueryParameters, Query()],
-        request: ser.Opportunity.AddTags) -> JSONResponse:
+    query: Annotated[sopp.AddTagsQueryParameters, Query()],
+    request: ser.Opportunity.AddTags) -> JSONResponse:
     class ErrorCode(IntEnum):
         INVALID_OPPORTUNITY_ID = 200
 
@@ -199,12 +199,14 @@ register_request_validation_error_handler(
 )
 
 @app.post('/api/private/opportunity/geotags')
-def add_opportunity_geo_tags(request: ser.Opportunity.AddGeoTags) -> JSONResponse:
+def add_opportunity_geo_tags(
+    query: Annotated[sopp.AddGeoTagsQueryParameters, Query()],
+    request: ser.Opportunity.AddGeoTags) -> JSONResponse:
     class ErrorCode(IntEnum):
         INVALID_OPPORTUNITY_ID = 200
 
     with db.Session.begin() as session:
-        api_key = get_developer_api_key(session, request.api_key)
+        api_key = get_developer_api_key(session, query.api_key)
         if not isinstance(api_key, db.DeveloperAPIKey):
             return get_developer_api_key_error_response()
         opportunity = get_opportunity_by_id(session, request.opportunity_id)
