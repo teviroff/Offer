@@ -1,19 +1,19 @@
 
 services:
-  app:
-    container_name: "offer_app"
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: uvicorn app:app --host 0.0.0.0
-    depends_on:
-      - postgres
-      - mongodb
-    ports:
-      - "8000:8000"
-    restart: always
-    networks:
-      - backend
+#  app:
+#    container_name: "offer_app"
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+#    command: uvicorn app:app --host 0.0.0.0
+#    depends_on:
+#      - postgres
+#      - mongodb
+#    ports:
+#      - "8000:8000"
+#    restart: always
+#    networks:
+#      - backend
 
   postgres:
     image: postgres:latest
@@ -51,8 +51,8 @@ services:
     restart: unless-stopped
     tty: true
     stdin_open: true
-    networks:
-      - backend
+#    networks:
+#      - backend
   mongodb:
     image: mongo:latest
     container_name: mongodb_container
@@ -60,8 +60,8 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
-    networks:
-      - backend
+#    networks:
+#      - backend
   minio:
     image: minio/minio
     container_name: minio_container
@@ -74,8 +74,8 @@ services:
       MINIO_ROOT_USER: admin
       MINIO_ROOT_PASSWORD: password
     command: server --console-address ":9001" /data
-    networks:
-      - backend
+#    networks:
+#      - backend
 volumes:
   pgdata:
     driver: local

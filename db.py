@@ -38,13 +38,13 @@ pg_engine = get_pg_engine(
     port=dbcfg.PG_PORT,
     db_name=dbcfg.PG_DB_NAME,
 )
-connect_mongo_db(
-    user=dbcfg.MONGO_USERNAME,
-    password=dbcfg.MONGO_PASSWORD,
-    host=dbcfg.MONGO_HOST,
-    port=dbcfg.MONGO_PORT,
-    db_name=dbcfg.MONGO_DB_NAME,
-)
+# connect_mongo_db(
+#     user=dbcfg.MONGO_USERNAME,
+#     password=dbcfg.MONGO_PASSWORD,
+#     host=dbcfg.MONGO_HOST,
+#     port=dbcfg.MONGO_PORT,
+#     db_name=dbcfg.MONGO_DB_NAME,
+# )
 minio_client = get_minio_client(
     access_key=dbcfg.MINIO_ACCESS_KEY,
     secret_key=dbcfg.MINIO_SECRET_KEY,
@@ -54,7 +54,7 @@ minio_client = get_minio_client(
 
 Session = sessionmaker(bind=pg_engine)
 
-# if you want to update postgres shema, run following commands in interactive console:
+# if you want to update postgres schema, run following commands in interactive console:
 # >>> from db import *
 # >>> Base.metadata.drop_all(pg_engine)
 # >>> Base.metadata.create_all(pg_engine)

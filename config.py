@@ -2,8 +2,6 @@ import logging
 import os
 from datetime import datetime
 
-# import ui
-# import api
 LOCAL: bool = True
 
 LOG_FOLDER = datetime.now().strftime('%d.%m.%Y')
