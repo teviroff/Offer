@@ -34,7 +34,7 @@ class Opportunity(Base):
     __tablename__ = 'opportunity'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(50))
+    name: Mapped[str] = mapped_column(String(100))
     link: Mapped[str | None] = mapped_column(String(120), nullable=True)
     provider_id: Mapped[int] = mapped_column(ForeignKey('opportunity_provider.id'))
 
@@ -59,6 +59,9 @@ class Opportunity(Base):
         opportunity = Opportunity(name=fields.name, link=fields.link, provider=provider)
         session.add(opportunity)
         return opportunity
+
+    def get_form(self) -> OpportunityForm | None:
+        return OpportunityForm.objects(id=self.id).first()
 
     # TODO
     @classmethod
@@ -105,12 +108,6 @@ class Opportunity(Base):
            Can't error in current implementation."""
 
         minio_client.put_object('opportunity-description', f'{self.id}.md', file.stream, file.size)
-
-    def update_form(self, fields: ser.Opportunity.UpdateFormFields) -> None:
-        form: OpportunityForm | None = OpportunityForm.objects(id=self.id).first()
-        if form is None:
-            ...
-        fields = OpportunityForm.create(fields.fields)
 
     def get_dict(self) -> dict:
         return {

@@ -1,7 +1,4 @@
-from dns.e164 import query
-
 from formatters.base import *
-from formatters.opportunity.fields import FormFieldsFormatter
 from utils import *
 from models.opportunity.opportunity import (
     CreateOpportunityErrorCode, AddOpportunityTagErrorCode,
@@ -21,19 +18,6 @@ class CreateOpportunityFormatter(BaseSerializerFormatter, BaseDBFormatter):
     class ErrorCode(IntEnum):
         INVALID_PROVIDER_ID = 200
 
-    # serializer_error_appender = APISerializerErrorAppender(
-    #     name=append_serializer_field_error_factory(transform_str_error_factory('Opportunity name', min_length=1,
-    #                                                                            max_length=50)),
-    #     link=append_serializer_field_error_factory(transform_http_url_error_factory('Opportunity link',
-    #                                                                                 max_length=120)),
-    #     provider_id=append_serializer_field_error_factory(transform_id_error_factory('Opportunity provider id')),
-    #     description=append_serializer_field_error_factory(transform_str_error_factory('Opportunity description',
-    #                                                                                   min_length=0, max_length=250)),
-    #     fields=append_nested_model_error_factory(
-    #         transformer=transform_nested_model_error_factory('Form fields'),
-    #         model_error_appender=FormFieldsFormatter.append_serializer_error,
-    #     ),
-    # )
     serializer_error_appender = RootSerializerErrorAppender(
         query=APISerializerErrorAppender().append_error,
         body=BaseSerializerErrorAppender(
@@ -42,12 +26,6 @@ class CreateOpportunityFormatter(BaseSerializerFormatter, BaseDBFormatter):
             link=append_serializer_field_error_factory(transform_http_url_error_factory(
                 'Opportunity link', max_length=120)),
             provider_id=append_serializer_field_error_factory(transform_id_error_factory('Opportunity provider id')),
-            description=append_serializer_field_error_factory(transform_str_error_factory(
-                'Opportunity description', min_length=0, max_length=250)),
-            fields=append_nested_model_error_factory(
-               transformer=transform_nested_model_error_factory('Form fields'),
-               model_error_appender=FormFieldsFormatter.append_serializer_error,
-            ),
         ).append_error,
     )
 
@@ -66,14 +44,6 @@ class AddOpportunityTagFormatter(BaseSerializerFormatter, BaseDBFormatter):
     class ErrorCode(IntEnum):
         INVALID_OPPORTUNITY_ID = 200
         INVALID_TAG_ID = 201
-
-    # serializer_error_appender = APISerializerErrorAppender(
-    #     opportunity_id=append_serializer_field_error_factory(transform_id_error_factory('Opportunity id')),
-    #     tag_ids=append_serializer_list_error_factory(
-    #         transformer=transform_list_error_factory('Tag ids'),
-    #         element_error_appender=append_serializer_field_error_factory(transform_id_error_factory('Tag id')),
-    #     ),
-    # )
 
     serializer_error_appender = RootSerializerErrorAppender (
         query=APISerializerErrorAppender(

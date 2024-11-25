@@ -11,6 +11,9 @@ from formatters.opportunity.opportunity import (
     AddOpportunityTagFormatter, AddOpportunityGeoTagFormatter,
     UpdateOpportunityDescriptionFormatter,
 )
+from formatters.opportunity.form import (
+    UpdateOpportunityFormSubmitMethodFormatter, UpdateOpportunityFormFieldsFormatter,
+)
 from formatters.opportunity.tag import CreateOpportunityTagFormatter
 from formatters.opportunity.geotag import CreateOpportunityGeoTagFormatter
 from formatters.opportunity.card import CreateOpportunityCardFormatter

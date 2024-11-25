@@ -116,7 +116,6 @@ register_request_validation_error_handler(
 #     ...
 #     return JSONResponse({})
 
-# TODO: return id
 @app.post('/api/private/opportunity-provider')
 def create_opportunity_provider(
         query: Annotated[base.QueryParameters, Query()],
@@ -125,8 +124,9 @@ def create_opportunity_provider(
         api_key = get_developer_api_key(session, query.api_key)
         if not isinstance(api_key, db.DeveloperAPIKey):
             return get_developer_api_key_error_response()
-        db.OpportunityProvider.create(session, request)
-    return JSONResponse({})
+        provider = db.OpportunityProvider.create(session, request)
+        session.flush([provider])
+        return JSONResponse({'provider_id': provider.id})
 
 register_request_validation_error_handler(
     '/api/private/opportunity-provider', 'POST',
@@ -253,9 +253,42 @@ register_request_validation_error_handler(
 )
 
 @app.put('/api/private/opportunity/form/submit')
-def update_opportunity_form_submit(
+def update_opportunity_form_submit_method(
     query: Annotated[ser.Opportunity.QueryParameters, Query()],
-    submit: ser.Opportunity.UpdateFormSubmit,
+    body: ser.Opportunity.UpdateFormSubmitMethod,
+) -> JSONResponse:
+    class ErrorCode(IntEnum):
+        INVALID_OPPORTUNITY_ID = 200
+        OPPORTUNITY_FORM_DOESNT_EXIST = 201
+
+    with db.Session.begin() as session:
+        api_key = get_developer_api_key(session, query.api_key)
+        if not isinstance(api_key, db.DeveloperAPIKey):
+            return get_developer_api_key_error_response()
+        opportunity = get_opportunity_by_id(session, query.opportunity_id)
+        if opportunity is None:
+            return JSONResponse(fmt.GetOpportunityByIDFormatter.get_db_error(code=ErrorCode.INVALID_OPPORTUNITY_ID),
+                                status_code=422)
+        form = opportunity.get_form()
+        if form is None:
+            return JSONResponse(
+                fmt.UpdateOpportunityFormSubmitMethodFormatter.get_form_doesnt_exist_error(
+                    code=ErrorCode.OPPORTUNITY_FORM_DOESNT_EXIST),
+                status_code=422
+            )
+        form.update_submit_method(body.submit_method)
+    return JSONResponse({})
+
+register_request_validation_error_handler(
+    '/api/private/opportunity/form/submit', 'PUT',
+    handler=default_request_validation_error_handler_factory(
+        fmt.UpdateOpportunityFormSubmitMethodFormatter.format_serializer_errors)
+)
+
+@app.put('/api/private/opportunity/form/fields')
+def update_opportunity_form_fields(
+    query: Annotated[ser.Opportunity.QueryParameters, Query()],
+    body: ser.Opportunity.UpdateFormFields,
 ) -> JSONResponse:
     class ErrorCode(IntEnum):
         INVALID_OPPORTUNITY_ID = 200
@@ -268,16 +301,18 @@ def update_opportunity_form_submit(
         if opportunity is None:
             return JSONResponse(fmt.GetOpportunityByIDFormatter.get_db_error(code=ErrorCode.INVALID_OPPORTUNITY_ID),
                                 status_code=422)
-        ...
+        form = opportunity.get_form()
+        if form is None:
+            db.OpportunityForm.create(opportunity_id=opportunity.id, fields=body.fields)
+        else:
+            form.update_fields(body.fields)
     return JSONResponse({})
 
-@app.put('/api/private/opportunity/form/fields')
-def update_opportunity_form_fields(
-    query: Annotated[ser.Opportunity.QueryParameters, Query()],
-    fields: ser.Opportunity.UpdateFormFields,
-) -> JSONResponse:
-    ...
-    return JSONResponse({})
+register_request_validation_error_handler(
+    '/api/private/opportunity/form/fields', 'PUT',
+    handler=default_request_validation_error_handler_factory(
+        fmt.UpdateOpportunityFormFieldsFormatter.format_serializer_errors)
+)
 
 
 @app.post('/api/private/opportunity-tag')
