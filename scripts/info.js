@@ -48,7 +48,7 @@ function deleteCV(deleteButton) {
     })
     .then(async (response) => {
         if (response.status === 200) {
-            alert('Successfully deleted CV, reload page to see changes')
+            updateCVList()
             return
         }
         response_json = await response.json()
@@ -63,7 +63,7 @@ function deleteCV(deleteButton) {
 
 function updateCVList() {
     const cvs_container = document.getElementById('cvs-container')
-    cvs_container.textContent = ''  // delete all children
+    //cvs_container.textContent = ''  // delete all children
     fetch("/me/cvs", {
         method: "GET"
     })
@@ -90,6 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCVList()
     const avatarUploadButton = document.getElementById("avatar-upload")
     const avatarField = document.getElementById("avatar-field")
+    const avatarImg = document.getElementById("avatar-img")
     avatarUploadButton.addEventListener("click", (e) => {
         if (avatarField.files.length === 0) {
             avatarField.parentElement.children[1].textContent = 'Select a file to upload'
@@ -103,10 +104,9 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(async (response) => {
             if (response.status === 200) {
-                alert('Successfully updated avatar, reload page to see changes')
-                temp = avatarField.src
-                avatarField.src = "penis.png"
-                alert("penis")
+                temp = avatarImg.src
+                avatarImg.src = ''
+                avatarImg.src = temp + "?" + new Date().getTime();
                 return
             }
             response_json = await response.json()
@@ -212,7 +212,7 @@ uploadButton.addEventListener('click', (e) => {
     })
     .then(async (response) => {
         if (response.status === 200) {
-            alert('Successfully uploaded CV, reload page to see changes')
+            updateCVList()
             return
         }
         response_json = await response.json()

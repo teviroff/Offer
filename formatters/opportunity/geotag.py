@@ -1,3 +1,5 @@
+from dns.e164 import query
+
 from formatters.base import *
 from models.opportunity.opportunity import CreateOpportunityGeoTagErrorCode
 
@@ -7,8 +9,15 @@ class CreateOpportunityGeoTagFormatter(BaseSerializerFormatter, BaseDBFormatter)
         INVALID_CITY_ID = 200
         NON_UNIQUE_CITY = 201
 
-    serializer_error_appender = APISerializerErrorAppender(
-        city_id=append_serializer_field_error_factory(transform_id_error_factory('City id')),
+    # serializer_error_appender = APISerializerErrorAppender(
+    #     city_id=append_serializer_field_error_factory(transform_id_error_factory('City id')),
+    # )
+
+    serializer_error_appender = RootSerializerErrorAppender(
+        query=APISerializerErrorAppender().append_error,
+        body=BaseSerializerErrorAppender(
+            city_id=append_serializer_field_error_factory(transform_id_error_factory('City id')),
+        ).append_error,
     )
 
     @staticmethod

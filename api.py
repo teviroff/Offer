@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 import db as db
 import serializers.mod as ser
 import formatters.mod as fmt
+import serializers.base as base
+import serializers.opportunity.opportunity as sopp
 import middleware as mw
 
 
@@ -116,9 +118,11 @@ register_request_validation_error_handler(
 
 # TODO: return id
 @app.post('/api/private/opportunity-provider')
-def create_opportunity_provider(request: ser.OpportunityProvider.Create) -> JSONResponse:
+def create_opportunity_provider(
+        query: Annotated[base.QueryParameters, Query()],
+        request: ser.OpportunityProvider.Create) -> JSONResponse:
     with db.Session.begin() as session:
-        api_key = get_developer_api_key(session, request.api_key)
+        api_key = get_developer_api_key(session, query.api_key)
         if not isinstance(api_key, db.DeveloperAPIKey):
             return get_developer_api_key_error_response()
         db.OpportunityProvider.create(session, request)
@@ -145,9 +149,11 @@ async def get_opportunity_provider_logo(request: Request, provider_id: Annotated
 
 
 @app.post('/api/private/opportunity')
-def create_opportunity(request: ser.Opportunity.Create) -> JSONResponse:
+def create_opportunity(
+        query: Annotated[base.QueryParameters, Query()],
+        request: ser.Opportunity.Create) -> JSONResponse:
     with db.Session.begin() as session:
-        api_key = get_developer_api_key(session, request.api_key)
+        api_key = get_developer_api_key(session, query.api_key)
         if not isinstance(api_key, db.DeveloperAPIKey):
             return get_developer_api_key_error_response()
         opportunity = db.Opportunity.create(session, request)
@@ -167,12 +173,14 @@ def get_opportunity_by_id(session: Session, opportunity_id: ser.ID) -> db.Opport
     return session.get(db.Opportunity, opportunity_id)
 
 @app.post('/api/private/opportunity/tags')
-def add_opportunity_tags(request: ser.Opportunity.AddTags) -> JSONResponse:
+def add_opportunity_tags(
+        query: Annotated[sopp.AddTagsQueryParameters, Query()],
+        request: ser.Opportunity.AddTags) -> JSONResponse:
     class ErrorCode(IntEnum):
         INVALID_OPPORTUNITY_ID = 200
 
     with db.Session.begin() as session:
-        api_key = get_developer_api_key(session, request.api_key)
+        api_key = get_developer_api_key(session, query.api_key)
         if not isinstance(api_key, db.DeveloperAPIKey):
             return get_developer_api_key_error_response()
         opportunity = get_opportunity_by_id(session, request.opportunity_id)
@@ -271,9 +279,11 @@ def update_opportunity_form_fields(
 
 
 @app.post('/api/private/opportunity-tag')
-def create_opportunity_tag(request: ser.OpportunityTag.Create) -> JSONResponse:
+def create_opportunity_tag(
+    query: Annotated[base.QueryParameters, Query()],
+    request: ser.OpportunityTag.Create) -> JSONResponse:
     with db.Session.begin() as session:
-        api_key = get_developer_api_key(session, request.api_key)
+        api_key = get_developer_api_key(session, query.api_key)
         if not isinstance(api_key, db.DeveloperAPIKey):
             return get_developer_api_key_error_response()
         tag_or_error = db.OpportunityTag.create(session, request)
@@ -288,9 +298,11 @@ register_request_validation_error_handler(
 )
 
 @app.post('/api/private/opportunity-geotag')
-def create_opportunity_geo_tag(request: ser.OpportunityGeoTag.Create) -> JSONResponse:
+def create_opportunity_geo_tag(
+    query: Annotated[base.QueryParameters, Query()],
+    request: ser.OpportunityGeoTag.Create) -> JSONResponse:
     with db.Session.begin() as session:
-        api_key = get_developer_api_key(session, request.api_key)
+        api_key = get_developer_api_key(session, query.api_key)
         if not isinstance(api_key, db.DeveloperAPIKey):
             return get_developer_api_key_error_response()
         tag_or_error = db.OpportunityGeoTag.create(session, request)

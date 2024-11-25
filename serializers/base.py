@@ -10,3 +10,8 @@ class APIKey(BaseModel):
     model_config = {'extra': 'ignore'}
 
     key: API_KEY
+
+class QueryParameters(BaseModel):
+    model_config = {'extra': 'ignore'}
+
+    api_key: API_KEY
