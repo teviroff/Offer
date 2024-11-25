@@ -200,19 +200,22 @@ register_request_validation_error_handler(
 )
 
 @app.post('/api/private/opportunity/geotags')
-def add_opportunity_geo_tags(request: ser.Opportunity.AddGeoTags) -> JSONResponse:
+def add_opportunity_geo_tags(
+    query: Annotated[ser.Opportunity.QueryParameters, Query()],
+    body: ser.Opportunity.AddGeoTags
+) -> JSONResponse:
     class ErrorCode(IntEnum):
         INVALID_OPPORTUNITY_ID = 200
 
     with db.Session.begin() as session:
-        api_key = get_developer_api_key(session, request.api_key)
+        api_key = get_developer_api_key(session, query.api_key)
         if not isinstance(api_key, db.DeveloperAPIKey):
             return get_developer_api_key_error_response()
-        opportunity = get_opportunity_by_id(session, request.opportunity_id)
+        opportunity = get_opportunity_by_id(session, body.opportunity_id)
         if opportunity is None:
             return JSONResponse(fmt.GetOpportunityByIDFormatter.get_db_error(code=ErrorCode.INVALID_OPPORTUNITY_ID),
                                 status_code=422)
-        errors = opportunity.add_geo_tags(session, request)
+        errors = opportunity.add_geo_tags(session, body)
         if errors is not None:
             session.rollback()
             return JSONResponse(fmt.AddOpportunityGeoTagFormatter.format_db_errors(errors), status_code=422)
