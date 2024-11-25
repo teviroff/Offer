@@ -257,7 +257,7 @@ class UserInfo(Base):
         ...
 
     def update_avatar(self, minio_client: Minio, file: File) -> None:
-        """Method for uploading and updating user avatar. 'file'. Can't error in current implementation."""
+        """Method for updating user avatar. 'file'. Can't error in current implementation."""
 
         minio_client.put_object('user-avatar', f'{self.user_id}.png', file.stream, file.size)
 

@@ -14,7 +14,7 @@ from models.opportunity.opportunity import (
     OpportunityToTag, OpportunityToGeoTag, OpportunityCard
 )
 from mongo_models.opportunity_fields import (
-    OpportunityFields, FieldType as OpportunityFieldType,
+    OpportunityForm, FieldType as OpportunityFieldType,
 )
 from models.opportunity.response import OpportunityResponse, ResponseStatus
 

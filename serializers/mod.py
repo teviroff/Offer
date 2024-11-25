@@ -7,7 +7,7 @@ from serializers.user import (
 )
 from serializers.opportunity import (
     provider as OpportunityProvider,
-    fields as OpportunityFields,
+    form as OpportunityForm,
     opportunity as Opportunity,
     tag as OpportunityTag,
     geo_tag as OpportunityGeoTag,

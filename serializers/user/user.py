@@ -40,3 +40,10 @@ class Login(LoginFields):
 
     ip: IPv4Address
     port: Annotated[int, Field(strict=True, ge=0, lt=65536)]
+
+
+class QueryParameters(BaseModel):
+    model_config = {'extra': 'ignore'}
+
+    api_key: API_KEY
+    user_id: ID

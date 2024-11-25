@@ -12,9 +12,6 @@ logger = logging.getLogger('database')
 class Base(DeclarativeBase):
     pass
 
-# MongoDB aliases
-MongoID = String(24)
-mongo_id = str
 
 @dataclass
 class File:

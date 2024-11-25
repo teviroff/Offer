@@ -325,7 +325,7 @@ def opportunity(request: Request, opportunity_id: Annotated[int, Path(ge=1)]):
     return templates.TemplateResponse(request, 'opportunity/page.html', context=context)
 
 @app.get('/opportunity/{opportunity_id}/description')
-def get_opportunity_description(request: Request, opportunity_id: Annotated[int, Path(ge=1)]):
+async def get_opportunity_description(request: Request, opportunity_id: Annotated[int, Path(ge=1)]):
     api_key = get_optional_api_key_model(request)
     if not isinstance(api_key, ser.APIKey):
         return page_access_forbidden(request)
@@ -340,7 +340,7 @@ def get_opportunity_description(request: Request, opportunity_id: Annotated[int,
     return Response(description, media_type='text/markdown')
 
 @app.get('/opportunity/{opportunity_id}/form')
-def get_opportunity_form(request: Request, opportunity_id: Annotated[int, Path(ge=1)]):
+async def get_opportunity_form(request: Request, opportunity_id: Annotated[int, Path(ge=1)]):
     api_key = get_optional_api_key_model(request)
     if not isinstance(api_key, ser.APIKey):
         return page_access_forbidden(request)
@@ -354,7 +354,7 @@ def get_opportunity_form(request: Request, opportunity_id: Annotated[int, Path(g
         if opportunity.fields is None:
             fields = None
         else:
-            fields: db.OpportunityFields | None = db.OpportunityFields.objects(id=opportunity.fields).first()
+            fields: db.OpportunityForm | None = db.OpportunityForm.objects(id=opportunity.fields).first()
     if fields is None:
         return HTMLResponse()
     content = ''
@@ -366,16 +366,6 @@ def get_opportunity_form(request: Request, opportunity_id: Annotated[int, Path(g
     for field in fields.fields:
         content += templates.get_template(field_type_to_template[field.type]).render(**field.to_dict())
     return HTMLResponse(content)
-
-# @app.get('/opportunity/{opportunity_id}')
-# def opportunity(request: Request, opportunity_id: Annotated[int, Path()]):
-#     if request.cookies.get('user_id') is None:
-#         return RedirectResponse('/login')
-#     with db.Session.begin() as session:
-#         dict_or_none = db.Opportunity.get_dict(session, opportunity_id)
-#         if dict_or_none is None:
-#             return page_not_found_response(request)
-#     return templates.TemplateResponse(request, 'opportunity.html', context=dict_or_none)
 
 # carddata = {
 #     'title': 'C# Junior Desktop',

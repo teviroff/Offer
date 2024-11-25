@@ -1,14 +1,12 @@
 from typing import Self, Union
 
-from sqlalchemy import String, ForeignKey
-from sqlalchemy.orm import Session, Mapped, mapped_column, relationship
 from minio import Minio, S3Error
 
 from utils import *
-from models.base import Base, MongoID, mongo_id
+from models.base import *
 from models.auxillary.address import City
 from models.opportunity import response
-from mongo_models.opportunity_fields import OpportunityFields
+from mongo_models.opportunity_fields import OpportunityForm
 import serializers.mod as ser
 
 import logging
@@ -39,7 +37,6 @@ class Opportunity(Base):
     name: Mapped[str] = mapped_column(String(50))
     link: Mapped[str | None] = mapped_column(String(120), nullable=True)
     provider_id: Mapped[int] = mapped_column(ForeignKey('opportunity_provider.id'))
-    fields: Mapped[mongo_id | None] = mapped_column(MongoID, nullable=True)
 
     provider: Mapped['OpportunityProvider'] = relationship(back_populates='opportunities')
     tags: Mapped[set['OpportunityTag']] = relationship(secondary='opportunity_to_tag', back_populates='opportunities')
@@ -60,9 +57,6 @@ class Opportunity(Base):
                 error_message='Opportunity provider with given id doesn\'t exist',
             )
         opportunity = Opportunity(name=fields.name, link=fields.link, provider=provider)
-        if fields.fields is not None:
-            fields = OpportunityFields.create(fields.fields)
-            opportunity.fields = str(fields.id)
         session.add(opportunity)
         return opportunity
 
@@ -72,15 +66,8 @@ class Opportunity(Base):
             -> list[Self] | list[GenericError[FilterOpportunityErrorCode]]:
         ...
 
-    @classmethod
-    def add_tags(cls, session: Session, fields: ser.Opportunity.AddTagsFields) \
+    def add_tags(self, session: Session, fields: ser.Opportunity.AddTagsFields) \
             -> None | list[GenericError[AddOpportunityTagErrorCode, int | None]]:
-        opportunity: Opportunity | None = session.query(Opportunity).get(fields.opportunity_id)
-        if opportunity is None:
-            logger.debug('\'Opportunity.add_tags\' exited with \'INVALID_OPPORTUNITY_ID\' error (opportunity_id=%i)',
-                         fields.opportunity_id)
-            return [GenericError(error_code=AddOpportunityTagErrorCode.INVALID_OPPORTUNITY_ID,
-                                 error_message='Opportunity with provided id doesn\'t exist')]
         tag_errors: list[GenericError[AddOpportunityTagErrorCode, int]] = []
         for i, tag_id in enumerate(fields.tag_ids):
             tag: Union['OpportunityTag', None] = session.query(OpportunityTag).get(tag_id)
@@ -92,19 +79,12 @@ class Opportunity(Base):
                                  error_message='Opportunity tag with provided id doesn\'t exist', context=i)
                 )
                 continue
-            opportunity.tags.add(tag)
+            self.tags.add(tag)
         if len(tag_errors) > 0:
             return tag_errors
 
-    @classmethod
-    def add_geo_tags(cls, session: Session, fields: ser.Opportunity.AddGeoTagsFields) \
+    def add_geo_tags(self, session: Session, fields: ser.Opportunity.AddGeoTagsFields) \
             -> None | list[GenericError[AddOpportunityGeoTagErrorCode, int | None]]:
-        opportunity: Opportunity | None = session.query(Opportunity).get(fields.opportunity_id)
-        if opportunity is None:
-            logger.debug('\'Opportunity.add_geo_tags\' exited with \'INVALID_OPPORTUNITY_ID\' error '
-                         '(opportunity_id=%i)', fields.opportunity_id)
-            return [GenericError(error_code=AddOpportunityGeoTagErrorCode.INVALID_OPPORTUNITY_ID,
-                                 error_message='Opportunity with provided id doesn\'t exist')]
         tag_errors: list[GenericError[AddOpportunityGeoTagErrorCode, int]] = []
         for i, tag_id in enumerate(fields.geo_tag_ids):
             tag: Union['OpportunityGeoTag', None] = session.query(OpportunityGeoTag).get(tag_id)
@@ -116,9 +96,21 @@ class Opportunity(Base):
                                  error_message='Opportunity geo tag with provided id doesn\'t exist', context=i)
                 )
                 continue
-            opportunity.geo_tags.add(tag)
+            self.geo_tags.add(tag)
         if len(tag_errors) > 0:
             return tag_errors
+
+    def update_description(self, minio_client: Minio, file: File) -> None:
+        """Method for updating opportunity description. Assumes 'file' is a valid Markdown file.
+           Can't error in current implementation."""
+
+        minio_client.put_object('opportunity-description', f'{self.id}.md', file.stream, file.size)
+
+    def update_form(self, fields: ser.Opportunity.UpdateFormFields) -> None:
+        form: OpportunityForm | None = OpportunityForm.objects(id=self.id).first()
+        if form is None:
+            ...
+        fields = OpportunityForm.create(fields.fields)
 
     def get_dict(self) -> dict:
         return {

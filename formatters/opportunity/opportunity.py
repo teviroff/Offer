@@ -113,3 +113,30 @@ class AddOpportunityGeoTagFormatter(BaseSerializerFormatter, BaseDBFormatter):
             append_db_field_error_factory('opportunity_id', transformer=transform_invalid_opportunity_id_error),
         AddOpportunityGeoTagErrorCode.INVALID_GEO_TAG_ID: append_invalid_geo_tag_id_error,
     })
+
+class UpdateOpportunityDescriptionFormatter(BaseSerializerFormatter):
+    @staticmethod
+    def transform_description_error(error: PydanticError, _root: int) -> FormattedError | None:
+        match error['type']:
+            case 'missing':
+                return FieldErrorCode.MISSING, 'Missing required field'
+            case 'value_error':
+                return FieldErrorCode.WRONG_TYPE, 'Description must be a file'
+
+    serializer_error_appender = RootSerializerErrorAppender(
+        query=APISerializerErrorAppender(
+            opportunity_id=append_serializer_field_error_factory(transform_id_error_factory('Opportunity id')),
+        ).append_error,
+        body=BaseSerializerErrorAppender(
+            description=append_serializer_field_error_factory(transform_description_error),
+        ).append_error,
+    )
+
+    @staticmethod
+    def get_invalid_content_type_error() -> ErrorTrace:
+        return {
+            'description': [{
+                'type': FieldErrorCode.WRONG_TYPE,
+                'message': 'Description must be a Markdown file',
+            }]
+        }

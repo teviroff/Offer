@@ -2,8 +2,8 @@ from typing import Annotated, Iterable
 from enum import IntEnum
 
 from config import *
-from fastapi import Path
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi import Path, Query, UploadFile
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 import db as db
@@ -86,18 +86,21 @@ async def get_user_avatar(request: Request, user_id: Annotated[int, Path(ge=1)])
     return Response(avatar, media_type='image/png')
 
 @app.patch('/api/user/info')
-def update_user_info(request: ser.UserInfo.Update) -> JSONResponse:
+def update_user_info(
+    query: Annotated[ser.User.QueryParameters, Query()],
+    fields: ser.UserInfo.Update,
+) -> JSONResponse:
     class ErrorCode(IntEnum):
         INVALID_USER_ID = 200
 
     with db.Session.begin() as session:
-        api_key = get_developer_api_key(session, request.api_key)
+        api_key = get_developer_api_key(session, query.api_key)
         if not isinstance(api_key, db.DeveloperAPIKey):
             return get_developer_api_key_error_response()
-        user = get_user_by_id(session, request.user_id)
+        user = get_user_by_id(session, query.user_id)
         if user is None:
             return get_user_by_id_error_response(ErrorCode.INVALID_USER_ID)
-        mw.update_user_info(session, user, request)
+        mw.update_user_info(session, user, fields)
     return JSONResponse({})
 
 register_request_validation_error_handler(
@@ -121,6 +124,11 @@ def create_opportunity_provider(request: ser.OpportunityProvider.Create) -> JSON
         db.OpportunityProvider.create(session, request)
     return JSONResponse({})
 
+register_request_validation_error_handler(
+    '/api/private/opportunity-provider', 'POST',
+    handler=default_request_validation_error_handler_factory(fmt.CreateProviderFormatter.format_serializer_errors)
+)
+
 def get_opportunity_provider_by_id(session: Session, provider_id: ser.ID) -> db.OpportunityProvider | None:
     """Get opportunity provider by id. Returns None if provider with provided id doesn't exist."""
 
@@ -135,10 +143,6 @@ async def get_opportunity_provider_logo(request: Request, provider_id: Annotated
         avatar = provider.get_avatar(db.minio_client)
     return Response(avatar, media_type='image/png')
 
-register_request_validation_error_handler(
-    '/api/private/opportunity-provider', 'POST',
-    handler=default_request_validation_error_handler_factory(fmt.CreateProviderFormatter.format_serializer_errors)
-)
 
 @app.post('/api/private/opportunity')
 def create_opportunity(request: ser.Opportunity.Create) -> JSONResponse:
@@ -157,16 +161,28 @@ register_request_validation_error_handler(
     handler=default_request_validation_error_handler_factory(fmt.CreateOpportunityFormatter.format_serializer_errors)
 )
 
+def get_opportunity_by_id(session: Session, opportunity_id: ser.ID) -> db.Opportunity | None:
+    """Get opportunity by id. Returns None if opportunity with provided id doesn't exist."""
+
+    return session.get(db.Opportunity, opportunity_id)
+
 @app.post('/api/private/opportunity/tags')
 def add_opportunity_tags(request: ser.Opportunity.AddTags) -> JSONResponse:
+    class ErrorCode(IntEnum):
+        INVALID_OPPORTUNITY_ID = 200
+
     with db.Session.begin() as session:
         api_key = get_developer_api_key(session, request.api_key)
         if not isinstance(api_key, db.DeveloperAPIKey):
             return get_developer_api_key_error_response()
-        none_or_errors = db.Opportunity.add_tags(session, request)
-        if none_or_errors is not None:
+        opportunity = get_opportunity_by_id(session, request.opportunity_id)
+        if opportunity is None:
+            return JSONResponse(fmt.GetOpportunityByIDFormatter.get_db_error(code=ErrorCode.INVALID_OPPORTUNITY_ID),
+                                status_code=422)
+        errors = opportunity.add_tags(session, request)
+        if errors is not None:
             session.rollback()
-            return JSONResponse(fmt.AddOpportunityTagFormatter.format_db_errors(none_or_errors), status_code=422)
+            return JSONResponse(fmt.AddOpportunityTagFormatter.format_db_errors(errors), status_code=422)
     return JSONResponse({})
 
 register_request_validation_error_handler(
@@ -176,20 +192,83 @@ register_request_validation_error_handler(
 
 @app.post('/api/private/opportunity/geotags')
 def add_opportunity_geo_tags(request: ser.Opportunity.AddGeoTags) -> JSONResponse:
+    class ErrorCode(IntEnum):
+        INVALID_OPPORTUNITY_ID = 200
+
     with db.Session.begin() as session:
         api_key = get_developer_api_key(session, request.api_key)
         if not isinstance(api_key, db.DeveloperAPIKey):
             return get_developer_api_key_error_response()
-        none_or_errors = db.Opportunity.add_geo_tags(session, request)
-        if none_or_errors is not None:
+        opportunity = get_opportunity_by_id(session, request.opportunity_id)
+        if opportunity is None:
+            return JSONResponse(fmt.GetOpportunityByIDFormatter.get_db_error(code=ErrorCode.INVALID_OPPORTUNITY_ID),
+                                status_code=422)
+        errors = opportunity.add_geo_tags(session, request)
+        if errors is not None:
             session.rollback()
-            return JSONResponse(fmt.AddOpportunityGeoTagFormatter.format_db_errors(none_or_errors), status_code=422)
+            return JSONResponse(fmt.AddOpportunityGeoTagFormatter.format_db_errors(errors), status_code=422)
     return JSONResponse({})
 
 register_request_validation_error_handler(
     '/api/private/opportunity/geotags', 'POST',
     handler=default_request_validation_error_handler_factory(fmt.AddOpportunityGeoTagFormatter.format_serializer_errors)
 )
+
+@app.patch('/api/private/opportunity/description')
+def update_opportunity_description(
+    query: Annotated[ser.Opportunity.QueryParameters, Query()],
+    description: UploadFile,
+) -> JSONResponse:
+    class ErrorCode(IntEnum):
+        INVALID_OPPORTUNITY_ID = 200
+
+    # Temporary solution, FastAPI doesn't support file content type validation
+    if description.content_type != 'text/markdown':
+        return JSONResponse(fmt.UpdateOpportunityDescriptionFormatter.get_invalid_content_type_error(),
+                            status_code=422)
+    with db.Session.begin() as session:
+        api_key = get_developer_api_key(session, query.api_key)
+        if not isinstance(api_key, db.DeveloperAPIKey):
+            return get_developer_api_key_error_response()
+        opportunity = get_opportunity_by_id(session, query.opportunity_id)
+        if opportunity is None:
+            return JSONResponse(fmt.GetOpportunityByIDFormatter.get_db_error(code=ErrorCode.INVALID_OPPORTUNITY_ID),
+                                status_code=422)
+        opportunity.update_description(db.minio_client, db.File(description.file, description.size))
+    return JSONResponse({})
+
+register_request_validation_error_handler(
+    '/api/private/opportunity/description', 'PATCH',
+    handler=default_request_validation_error_handler_factory(fmt.UpdateOpportunityDescriptionFormatter.format_serializer_errors)
+)
+
+@app.put('/api/private/opportunity/form/submit')
+def update_opportunity_form_submit(
+    query: Annotated[ser.Opportunity.QueryParameters, Query()],
+    submit: ser.Opportunity.UpdateFormSubmit,
+) -> JSONResponse:
+    class ErrorCode(IntEnum):
+        INVALID_OPPORTUNITY_ID = 200
+
+    with db.Session.begin() as session:
+        api_key = get_developer_api_key(session, query.api_key)
+        if not isinstance(api_key, db.DeveloperAPIKey):
+            return get_developer_api_key_error_response()
+        opportunity = get_opportunity_by_id(session, query.opportunity_id)
+        if opportunity is None:
+            return JSONResponse(fmt.GetOpportunityByIDFormatter.get_db_error(code=ErrorCode.INVALID_OPPORTUNITY_ID),
+                                status_code=422)
+        ...
+    return JSONResponse({})
+
+@app.put('/api/private/opportunity/form/fields')
+def update_opportunity_form_fields(
+    query: Annotated[ser.Opportunity.QueryParameters, Query()],
+    fields: ser.Opportunity.UpdateFormFields,
+) -> JSONResponse:
+    ...
+    return JSONResponse({})
+
 
 @app.post('/api/private/opportunity-tag')
 def create_opportunity_tag(request: ser.OpportunityTag.Create) -> JSONResponse:

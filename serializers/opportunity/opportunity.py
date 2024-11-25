@@ -2,7 +2,7 @@ from pydantic import HttpUrl, field_validator
 from pydantic_core import PydanticCustomError
 
 from serializers.base import *
-import serializers.opportunity.fields as fields
+import serializers.opportunity.form as form
 
 
 class CreateFields(BaseModel):
@@ -11,7 +11,6 @@ class CreateFields(BaseModel):
     name: Annotated[str, Field(min_length=1, max_length=50)]
     link: Annotated[HttpUrl | None, Field(default=None)]
     provider_id: ID
-    fields: Annotated[fields.FormFields | None, Field(default=None)]
 
     @field_validator('link')
     @classmethod
@@ -22,6 +21,13 @@ class CreateFields(BaseModel):
 
 class Create(CreateFields):
     api_key: API_KEY
+
+
+class QueryParameters(BaseModel):
+    model_config = {'extra': 'ignore'}
+
+    api_key: API_KEY
+    opportunity_id: ID
 
 
 class Filter(BaseModel):
@@ -35,18 +41,30 @@ class Filter(BaseModel):
 class AddTagsFields(BaseModel):
     model_config = {'extra': 'ignore'}
 
-    opportunity_id: ID
     tag_ids: list[ID]
 
 class AddTags(AddTagsFields):
     api_key: API_KEY
+    opportunity_id: ID
 
 
 class AddGeoTagsFields(BaseModel):
     model_config = {'extra': 'ignore'}
 
-    opportunity_id: ID
     geo_tag_ids: list[ID]
 
 class AddGeoTags(AddGeoTagsFields):
     api_key: API_KEY
+    opportunity_id: ID
+
+
+class UpdateFormSubmit(BaseModel):
+    model_config = {'extra': 'ignore'}
+
+    submit: form.SubmitMethod
+
+
+class UpdateFormFields(BaseModel):
+    model_config = {'extra': 'ignore'}
+
+    fields: form.FormFields

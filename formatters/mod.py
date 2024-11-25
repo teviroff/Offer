@@ -9,6 +9,7 @@ from formatters.opportunity.provider import CreateProviderFormatter
 from formatters.opportunity.opportunity import (
     GetOpportunityByIDFormatter, CreateOpportunityFormatter,
     AddOpportunityTagFormatter, AddOpportunityGeoTagFormatter,
+    UpdateOpportunityDescriptionFormatter,
 )
 from formatters.opportunity.tag import CreateOpportunityTagFormatter
 from formatters.opportunity.geotag import CreateOpportunityGeoTagFormatter
