@@ -30,37 +30,39 @@ function getForm() {
 function submitOpportunityForm() {
     const formContainer = document.getElementById("form-container")
     formData = {}
+    url_parts = document.location.href.split('/')
+    console.log(url_parts[url_parts.length - 1])
+    formData['opportunity_id'] = url_parts[url_parts.length - 1]
+    formData['data'] = {}
     for (let child of formContainer.children) {
         const field_data = child.getElementsByClassName("form-field-data")
-        const label_data = child.getElementsByClassName("form-label-data")[0]
         const select_data = child.getElementsByClassName("form-select-data")[0]
 
-        const classAttr = child.getAttribute("class")
+//        const classAttr = child.getAttribute("class")
 
-        switch (classAttr) {
-            case "string-form-field":
-                if (field_data[0].length > 128) {
-                    label_data[0].innerText += "String variable must be less 128 characters"
-                    return
-                }
-                break
-            case "regex-form-field":
-                regex_string = field_data[0].getAttribute("pattern")
-                if (!new RegExp(regex_string).test(field_data[0].innerText)) {
-                    label_data[0].innerText += "String must match the regex " + regex_string
-                    return
-                }
-                break
-        }
+//        switch (classAttr) {
+//            case "string-form-field":
+//                if (field_data[0].length > 128) {
+//                    label_data[0].innerText += "String variable must be less 128 characters"
+//                    return
+//                }
+//                break
+//            case "regex-form-field":
+//                regex_string = field_data[0].getAttribute("pattern")
+//                if (!new RegExp(regex_string).test(field_data[0].innerText)) {
+//                    label_data[0].innerText += "String must match the regex " + regex_string
+//                    return
+//                }
+//                break
+//        }
 
         if (field_data.length > 0) {
-            formData[label_data.innerText] = field_data[0].value;
+            formData['data'][child.getAttribute('field_name')] = field_data[0].value;
         } else {
-            formData[label_data.innerText] = select_data.options[select_data.selectedIndex].text;
+            formData['data'][child.getAttribute('field_name')] = select_data.options[select_data.selectedIndex].text;
         }
     }
-    console.log(JSON.stringify(formData));
-    fetch(`...`, {
+    fetch(`/opportunity/form`, {
         method: "POST",
         body: JSON.stringify(formData),
         headers: {
@@ -69,18 +71,20 @@ function submitOpportunityForm() {
     })
     .then(async (response) => {
         if (response.status === 200) {
-            response_json = JSON.parse(await response.json());
-            Object.keys(response_json).forEach(key => {
-                response_json[key].forEach(error => {
-                    const form_field = formContainer.querySelectorAll('[field_name=key]')
-                    if (form_field) {
-                        form_field.innerText += error;
-                    } else {
-                        getForm()
-                    }
-                })
-            })
+            alert('Successfuly submitted for an opportunity')
+            return
         }
+        response_json = JSON.parse(await response.json());
+        Object.keys(response_json).forEach(key => {
+            response_json[key].forEach(error => {
+                const form_field = formContainer.querySelectorAll('[field_name=key]')
+                if (form_field) {
+                    form_field.innerText += error;
+                } else {
+                    getForm()
+                }
+            })
+        })
     })
 }
 

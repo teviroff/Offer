@@ -24,7 +24,7 @@ def get_pg_engine(user: str, password: str, host: str, port: int, db_name: str):
     return create_engine(f'postgresql+psycopg://{user}:{password}@{host}:{port}/{db_name}')
 
 def connect_mongo_db(user: str, password: str, host: str, port: int, db_name: str):
-    connect(host=f'mongodb://{host}:{port}/{db_name}')
+    connect(host=f'mongodb://{user}:{password}@{host}:{port}/{db_name}')
 
 # TODO: figure out cerificates
 def get_minio_client(access_key: str, secret_key: str, host: str, port: int):
