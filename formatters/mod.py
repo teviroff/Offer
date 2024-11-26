@@ -13,6 +13,10 @@ from formatters.opportunity.opportunity import (
 )
 from formatters.opportunity.form import (
     UpdateOpportunityFormSubmitMethodFormatter, UpdateOpportunityFormFieldsFormatter,
+    StringFieldFormatter, RegexFieldFormatter, ChoiceFieldFormatter,
+)
+from formatters.opportunity.response import (
+    CreateOpportunityResponseFormatter,
 )
 from formatters.opportunity.tag import CreateOpportunityTagFormatter
 from formatters.opportunity.geotag import CreateOpportunityGeoTagFormatter

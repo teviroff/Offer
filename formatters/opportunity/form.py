@@ -37,6 +37,14 @@ class StringFieldFormatter(BaseSerializerFormatter):
         max_length=append_serializer_field_error_factory(transform_int_error_factory('Max length', ge=1))
     )
 
+    @staticmethod
+    def get_wrong_type_error() -> FormattedError:
+        return FieldErrorCode.WRONG_TYPE, 'Field input must be a string'
+
+    @staticmethod
+    def get_too_long_error(max_length: int) -> FormattedError:
+        return FieldErrorCode.LENGTH_NOT_IN_RANGE, f'Field input must contain at most {max_length} characters'
+
 class RegexFieldFormatter(StringFieldFormatter):
     @staticmethod
     def transform_regex_error(error: PydanticError, _root: int) -> FormattedError | None:
@@ -51,6 +59,10 @@ class RegexFieldFormatter(StringFieldFormatter):
     serializer_error_appender = copy(StringFieldFormatter.serializer_error_appender) \
         .add_field_error_appender('regex', append_serializer_field_error_factory(transform_regex_error))
 
+    @staticmethod
+    def get_invalid_pattern_error() -> FormattedError:
+        return FieldErrorCode.INVALID_PATTERN, 'Field input doesn\'t match expected pattern'
+
 class ChoiceFieldFormatter(BaseSerializerFormatter):
     serializer_error_appender = FieldSerializerErrorAppender(
         choices=append_serializer_list_error_factory(
@@ -58,6 +70,14 @@ class ChoiceFieldFormatter(BaseSerializerFormatter):
             element_error_appender=append_serializer_field_error_factory(transform_str_error_factory('Choice name')),
         )
     )
+
+    @staticmethod
+    def get_wrong_type_error() -> FormattedError:
+        return FieldErrorCode.WRONG_TYPE, 'Field input must be a string'
+
+    @staticmethod
+    def get_invalid_choice_error() -> FormattedError:
+        return FieldErrorCode.INVALID_CHOICE, 'Field input must be one of provided choices'
 
 class UpdateOpportunityFormFieldsFormatter(BaseSerializerFormatter):
     serializer_error_appender = RootSerializerErrorAppender(

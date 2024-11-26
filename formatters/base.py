@@ -7,20 +7,25 @@ from utils import *
 class FieldErrorCode(IntEnum):
     # Pydantic
     MISSING = 100
-    WRONG_TYPE = 101
-    INVALID_PATTERN = 102
-    LENGTH_NOT_IN_RANGE = 103
-    NOT_IN_RANGE = 104
-    MISSING_DISCRIMINATOR = 105
-    INVALID_DISCRIMINATOR = 106
+    EXTRA = 101
+    WRONG_TYPE = 102
+    INVALID_PATTERN = 103
+    LENGTH_NOT_IN_RANGE = 104
+    NOT_IN_RANGE = 105
+    MISSING_DISCRIMINATOR = 106
+    INVALID_DISCRIMINATOR = 107
     # DB
     INVALID_API_KEY = 150
     INSUFFICIENT_PERMISSIONS = 151
+    INVALID_CHOICE = 152
 
 type FormattedError = tuple[IntEnum, str]
 type ErrorTrace = dict[str, ErrorTrace | list[ErrorTrace]]
 type ErrorTransformer[E, C] = Callable[[E, C], FormattedError | None]
 type ErrorAppender[E, C] = Callable[[E, ErrorTrace, C], None]
+
+def formatted_error_to_trace_entry(error: FormattedError) -> dict[str, Any]:
+    return {'type': error[0], 'message': error[1]}
 
 type PydanticError = dict[str, Any]
 type SerializerErrorTransformer = ErrorTransformer[PydanticError, int]

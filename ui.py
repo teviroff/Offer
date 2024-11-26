@@ -303,6 +303,12 @@ def get_opportunity_by_id(session: Session, opportunity_id: ser.ID) -> db.Opport
 
     return session.get(db.Opportunity, opportunity_id)
 
+def get_opportunity_by_id_error(code: int) -> fmt.ErrorTrace:
+    return fmt.GetOpportunityByIDFormatter.get_db_error(code=code)
+
+def get_opportunity_by_id_error_response(code: int) -> JSONResponse:
+    return JSONResponse(get_opportunity_by_id_error(code), status_code=422)
+
 @app.get('/opportunity/{opportunity_id}')
 def opportunity(request: Request, opportunity_id: Annotated[int, Path(ge=1)]):
     api_key = get_optional_api_key_model(request)
@@ -364,24 +370,29 @@ async def get_opportunity_form(request: Request, opportunity_id: Annotated[int, 
         content += templates.get_template(field_type_to_template[field.type]).render(**field.to_dict(), name=name)
     return HTMLResponse(content)
 
-# carddata = {
-#     'title': 'C# Junior Desktop',
-#     'sub_title': 'MaUI .NET',
-#     'provider': {
-#         'name': 'MICROSOFT'
-#     },
-#     'tags': [{'name': 'C#'}, {'name': 'MaUI'}],
-#     'geo_tags': [{'city_name': 'Moscow'}, {'city_name': 'Peter'}]
-# }
-# @app.get('/card')
-# def card(request: Request):
-#     carddata['request'] = request
-#     return templates.TemplateResponse(name='card.html', context=carddata)
+@app.post('/opportunity/form')
+async def create_opportunity_response(request: Request, fields: ser.OpportunityResponse.Create) -> JSONResponse:
+    class ErrorCode(IntEnum):
+        INVALID_OPPORTUNITY_ID = 200
 
-# @app.post('/getcities')
-# async def GetCities(request: Request):
-#     country = (await request.json()).get('country')
-#
-#     print(countries[country])
-#     return JSONResponse(content=countries[country], status_code=200)
-#
+    api_key = get_api_key_model(request)
+    if not isinstance(api_key, ser.APIKey):
+        return get_api_key_error_json(api_key)
+    with db.Session.begin() as session:
+        personal_api_key = get_personal_api_key(request, session, api_key)
+        if not isinstance(personal_api_key, db.PersonalAPIKey):
+            return get_personal_api_key_error_json()
+        opportunity = get_opportunity_by_id(session, fields.opportunity_id)
+        if opportunity is None:
+            return get_opportunity_by_id_error_response(ErrorCode.INVALID_OPPORTUNITY_ID)
+        response = mw.create_opportunity_response(session, personal_api_key.user, opportunity, fields)
+        if not isinstance(response, db.OpportunityResponse):
+            session.rollback()
+            return JSONResponse(response, status_code=422)
+    return JSONResponse({})
+
+register_request_validation_error_handler(
+    '/opportunity/form', 'POST',
+    handler=default_request_validation_error_handler_factory(
+        fmt.CreateOpportunityResponseFormatter.format_serializer_errors)
+)

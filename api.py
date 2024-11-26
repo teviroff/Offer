@@ -372,6 +372,6 @@ register_request_validation_error_handler(
 
 # TODO: figure out NoSQL, add error formatter
 @app.post('/api/opportunity-response')
-def create_opportunity_response(request: ser.OpportunityResponse.Create) -> JSONResponse:
+def create_opportunity_response(request: ser.OpportunityResponse.CreateFields) -> JSONResponse:
     ...
     return JSONResponse({})

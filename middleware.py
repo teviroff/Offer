@@ -44,4 +44,13 @@ def reset_user_avatar(session: Session, user: db.User) -> None:
 
 # TODO: change CV accessability (sharing link)
 
-# TODO: opportunity response
+def create_opportunity_response(session: Session, user: db.User, opportunity: db.Opportunity,
+                                data: ser.OpportunityResponse.CreateFields) -> db.OpportunityResponse | fmt.ErrorTrace:
+    """Function for submitting data to opportunity form. Returns newly created OpportunityResponse instance on success.
+       Otherwise, returns dictionary with field errors. Session must be rolled back on failure.
+       Http error status code - 422."""
+
+    form = opportunity.get_form()
+    if form is None:
+        return fmt.CreateOpportunityResponseFormatter.get_opportunity_no_form_error()
+    return db.OpportunityResponse.create(session, user, opportunity, form, data)
