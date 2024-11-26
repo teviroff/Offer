@@ -56,6 +56,10 @@ services:
   mongodb:
     image: mongo:latest
     container_name: mongodb_container
+#    environment:
+#      MONGO_INITDB_ROOT_USERNAME: mongo
+#      MONGO_INITDB_ROOT_PASSWORD: admin
+#      MONGO_INITDB_DATABASE: offer
     ports:
       - "27017:27017"
     volumes:
