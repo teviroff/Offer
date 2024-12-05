@@ -2,9 +2,7 @@ from typing import Self, Optional
 from datetime import datetime, UTC
 from ipaddress import IPv4Address
 
-from sqlalchemy.dialects.postgresql import (
-    INET, INTEGER, TIMESTAMP
-)
+from sqlalchemy.dialects.postgresql import INET, TIMESTAMP
 from minio import Minio
 from minio.error import S3Error
 
@@ -20,18 +18,17 @@ class PersonalAPIKey(Base):
 
     user_id: Mapped[int] = mapped_column(ForeignKey('user.id'), primary_key=True)
     ip: Mapped[IPv4Address] = mapped_column(INET, primary_key=True)
-    port: Mapped[int] = mapped_column(INTEGER, primary_key=True)
     key: Mapped[str] = mapped_column(String(64), unique=True)
     expiry_date: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True))
 
     user: Mapped['User'] = relationship(back_populates='personal_api_keys')
 
     @classmethod
-    def generate_key(cls, session: Session, user_id: int, ip: IPv4Address, port: int) -> str:
+    def generate_key(cls, session: Session, user_id: int, ip: IPv4Address) -> str:
         from hashlib import sha256
 
         while True:
-            key = sha256(f'{user_id}/{ip}:{port}/{datetime.now()}'.encode()).hexdigest()[:64]
+            key = sha256(f'{user_id}/{ip}/{datetime.now()}'.encode()).hexdigest()[:64]
             if session.query(PersonalAPIKey).filter(PersonalAPIKey.key == key).first() is None:
                 break
         return key
@@ -40,15 +37,15 @@ class PersonalAPIKey(Base):
         session.delete(self)
 
     @classmethod
-    def generate(cls, session: Session, user: 'User', ip: IPv4Address, port: int, expiry_date: datetime) -> Self:
+    def generate(cls, session: Session, user: 'User', ip: IPv4Address, expiry_date: datetime) -> Self:
         if user.id is None:
             logger.error('\'PersonalAPIKey.generate\' called on user without id (user_email=\'%s\')', user.email)
             raise ValueError('Can\'t generate personal API key for user without id')
-        api_key: PersonalAPIKey | None = session.get(PersonalAPIKey, (user.id, ip, port))
+        api_key: PersonalAPIKey | None = session.get(PersonalAPIKey, (user.id, ip))
         if api_key is not None:
             api_key.expire(session)
-        key = cls.generate_key(session, user.id, ip, port)
-        api_key = PersonalAPIKey(ip=ip, port=port, key=key, expiry_date=expiry_date, user=user)
+        key = cls.generate_key(session, user.id, ip)
+        api_key = PersonalAPIKey(ip=ip, key=key, expiry_date=expiry_date, user=user)
         session.add(api_key)
         return api_key
 
@@ -95,6 +92,9 @@ class DeveloperAPIKey(Base):
 
     def __str__(self):
         return f'dev-{self.key}'
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class APIKey:

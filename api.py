@@ -143,7 +143,7 @@ async def get_opportunity_provider_logo(request: Request, provider_id: Annotated
         provider = get_opportunity_provider_by_id(session, provider_id)
         if provider is None:
             return page_not_found_response(request)
-        avatar = provider.get_avatar(db.minio_client)
+        avatar = provider.get_logo(db.minio_client)
     return Response(avatar, media_type='image/png')
 
 
@@ -160,7 +160,8 @@ def create_opportunity(
         if not isinstance(opportunity, db.Opportunity):
             session.rollback()
             return JSONResponse(fmt.CreateOpportunityFormatter.format_db_errors([opportunity]), status_code=422)
-    return JSONResponse({})
+        session.flush([opportunity])
+        return JSONResponse({'opportunity_id': opportunity.id})
 
 register_request_validation_error_handler(
     '/api/private/opportunity', 'POST',
@@ -184,7 +185,7 @@ def add_opportunity_tags(
         api_key = get_developer_api_key(session, query.api_key)
         if not isinstance(api_key, db.DeveloperAPIKey):
             return get_developer_api_key_error_response()
-        opportunity = get_opportunity_by_id(session, body.opportunity_id)
+        opportunity = get_opportunity_by_id(session, query.opportunity_id)
         if opportunity is None:
             return JSONResponse(fmt.GetOpportunityByIDFormatter.get_db_error(code=ErrorCode.INVALID_OPPORTUNITY_ID),
                                 status_code=422)
@@ -211,7 +212,7 @@ def add_opportunity_geo_tags(
         api_key = get_developer_api_key(session, query.api_key)
         if not isinstance(api_key, db.DeveloperAPIKey):
             return get_developer_api_key_error_response()
-        opportunity = get_opportunity_by_id(session, body.opportunity_id)
+        opportunity = get_opportunity_by_id(session, query.opportunity_id)
         if opportunity is None:
             return JSONResponse(fmt.GetOpportunityByIDFormatter.get_db_error(code=ErrorCode.INVALID_OPPORTUNITY_ID),
                                 status_code=422)
@@ -327,15 +328,66 @@ def create_opportunity_tag(
         api_key = get_developer_api_key(session, query.api_key)
         if not isinstance(api_key, db.DeveloperAPIKey):
             return get_developer_api_key_error_response()
-        tag_or_error = db.OpportunityTag.create(session, body)
-        if not isinstance(tag_or_error, db.OpportunityTag):
+        tag = db.OpportunityTag.create(session, body)
+        if not isinstance(tag, db.OpportunityTag):
             session.rollback()
-            return JSONResponse(fmt.CreateOpportunityTagFormatter.format_db_errors([tag_or_error]), status_code=422)
-    return JSONResponse({})
+            return JSONResponse(fmt.CreateOpportunityTagFormatter.format_db_errors([tag]), status_code=422)
+        session.flush([tag])
+        return JSONResponse({'tag_id': tag.id})
 
 register_request_validation_error_handler(
     '/api/private/opportunity-tag', 'POST',
     handler=default_request_validation_error_handler_factory(fmt.CreateOpportunityTagFormatter.format_serializer_errors)
+)
+
+@app.post('/api/private/country')
+def create_country(
+    query: Annotated[ser.QueryParameters, Query()],
+    body: ser.auxillary.Country,
+) -> JSONResponse:
+    with db.Session.begin() as session:
+        api_key = get_developer_api_key(session, query.api_key)
+        if not isinstance(api_key, db.DeveloperAPIKey):
+            return get_developer_api_key_error_response()
+        country = db.Country.create(session, body)
+        if not isinstance(country, db.Country):
+            return JSONResponse(fmt.CreateCountryFormatter.format_db_errors([country]), status_code=422)
+        session.flush([country])
+        return JSONResponse({'country_id': country.id})
+
+register_request_validation_error_handler(
+    '/api/private/country', 'POST',
+    handler=default_request_validation_error_handler_factory(fmt.CreateCountryFormatter.format_serializer_errors)
+)
+
+def get_country_by_id(session: Session, country_id: ser.ID) -> db.Country | None:
+    """Get country by id. Returns None if country with provided id doesn't exist."""
+
+    return session.get(db.Country, country_id)
+
+@app.post('/api/private/city')
+def create_city(
+    query: Annotated[ser.auxillary.CreateCityQueryParameters, Query()],
+    body: ser.auxillary.City,
+) -> JSONResponse:
+    class ErrorCode(IntEnum):
+        INVALID_COUNTRY_ID = 200
+
+    with db.Session.begin() as session:
+        api_key = get_developer_api_key(session, query.api_key)
+        if not isinstance(api_key, db.DeveloperAPIKey):
+            return get_developer_api_key_error_response()
+        country = get_country_by_id(session, query.country_id)
+        if country is None:
+            return JSONResponse(fmt.GetCountryByIDFormatter.get_db_error(code=ErrorCode.INVALID_COUNTRY_ID),
+                                status_code=422)
+        city = db.City.create(session, country, body)
+        session.flush([city])
+        return JSONResponse({'city_id': city.id})
+
+register_request_validation_error_handler(
+    '/api/private/city', 'POST',
+    handler=default_request_validation_error_handler_factory(fmt.CreateCityFormatter.format_serializer_errors)
 )
 
 @app.post('/api/private/opportunity-geotag')
@@ -347,11 +399,12 @@ def create_opportunity_geo_tag(
         api_key = get_developer_api_key(session, query.api_key)
         if not isinstance(api_key, db.DeveloperAPIKey):
             return get_developer_api_key_error_response()
-        tag_or_error = db.OpportunityGeoTag.create(session, body)
-        if not isinstance(tag_or_error, db.OpportunityGeoTag):
+        geotag = db.OpportunityGeoTag.create(session, body)
+        if not isinstance(geotag, db.OpportunityGeoTag):
             session.rollback()
-            return JSONResponse(fmt.CreateOpportunityGeoTagFormatter.format_db_errors([tag_or_error]), status_code=422)
-    return JSONResponse({})
+            return JSONResponse(fmt.CreateOpportunityGeoTagFormatter.format_db_errors([geotag]), status_code=422)
+        session.flush([geotag])
+        return JSONResponse({'geo_tag_id': geotag.id})
 
 register_request_validation_error_handler(
     '/api/private/opportunity-geotag', 'POST',
@@ -359,19 +412,28 @@ register_request_validation_error_handler(
         fmt.CreateOpportunityGeoTagFormatter.format_serializer_errors)
 )
 
-# TODO
-@app.post('/api/opportunity-card')
-def create_opportunity_card(request: ser.OpportunityCard.Create) -> JSONResponse:
-    ...
-    return JSONResponse({})
+@app.post('/api/private/opportunity-card')
+def create_opportunity_card(
+    query: Annotated[ser.Opportunity.QueryParameters, Query()],
+    body: ser.OpportunityCard.Create,
+) -> JSONResponse:
+    class ErrorCode(IntEnum):
+        INVALID_OPPORTUNITY_ID = 200
+
+    with db.Session.begin() as session:
+        api_key = get_developer_api_key(session, query.api_key)
+        if not isinstance(api_key, db.DeveloperAPIKey):
+            return get_developer_api_key_error_response()
+        opportunity = get_opportunity_by_id(session, query.opportunity_id)
+        if opportunity is None:
+            return JSONResponse(fmt.GetOpportunityByIDFormatter.get_db_error(code=ErrorCode.INVALID_OPPORTUNITY_ID),
+                                status_code=422)
+        card = db.OpportunityCard.create(session, opportunity, body)
+        session.flush([card])
+        return JSONResponse({'opportunity_card_id': card.id})
 
 register_request_validation_error_handler(
-    '/api/opportunity-card', 'POST',
-    handler=...
+    '/api/private/opportunity-card', 'POST',
+    handler=default_request_validation_error_handler_factory(
+        fmt.CreateOpportunityCardFormatter.format_serializer_errors)
 )
-
-# TODO: figure out NoSQL, add error formatter
-@app.post('/api/opportunity-response')
-def create_opportunity_response(request: ser.OpportunityResponse.CreateFields) -> JSONResponse:
-    ...
-    return JSONResponse({})

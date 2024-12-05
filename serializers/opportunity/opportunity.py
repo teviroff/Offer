@@ -29,9 +29,10 @@ class QueryParameters(BaseModel):
 class Filter(BaseModel):
     model_config = {'extra': 'ignore'}
 
-    api_key: OPTIONAL_API_KEY
-    tag_ids: list[ID]
-    geo_tag_ids: list[ID]
+    provider_ids: Annotated[list[ID], Field(default_factory=list)]
+    tag_ids: Annotated[list[ID], Field(default_factory=list)]
+    geo_tag_ids: Annotated[list[ID], Field(default_factory=list)]
+    page: Annotated[int, Field(default=1, ge=1)]
 
 
 class AddTags(BaseModel):

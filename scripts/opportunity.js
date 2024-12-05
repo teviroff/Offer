@@ -1,3 +1,21 @@
+function transformTags() {
+    const tagsContainer = document.getElementById("tags-container")
+    const tagsJSON = tagsContainer.children[0].innerText
+    JSON.parse(tagsJSON).forEach((tag) => {
+        tagsContainer.appendChild(createTag(tag["id"], tag["name"]))
+    })
+    tagsContainer.removeChild(tagsContainer.children[0])
+}
+
+function transformGeoTags() {
+    const geotagsContainer = document.getElementById("geotags-container")
+    const tagsJSON = geotagsContainer.children[0].innerText
+    JSON.parse(tagsJSON).forEach((tag) => {
+        geotagsContainer.appendChild(createGeoTag(tag["id"], tag["name"]))
+    })
+    geotagsContainer.removeChild(geotagsContainer.children[0])
+}
+
 function getDescription() {
     const descriptionContainer = document.getElementById("description-container")
     fetch(`${document.location.href}/description`, {
@@ -20,7 +38,8 @@ function getForm() {
     .then(async (response) => {
         if (response.status === 200) {
             formContainer.innerHTML = await response.text()
-            // ...
+            submitButton = document.getElementById("form-submit-button")
+            submitButton.addEventListener('click', submitOpportunityForm)
             return
         }
         formContainer.textContent = "Some error occured, refresh page to see opportunity response form"
@@ -28,15 +47,21 @@ function getForm() {
 }
 
 function submitOpportunityForm() {
-    const formContainer = document.getElementById("form-container")
+    const fieldsContainer = document.getElementById("form-fields-container")
     formData = {}
     url_parts = document.location.href.split('/')
-    console.log(url_parts[url_parts.length - 1])
     formData['opportunity_id'] = url_parts[url_parts.length - 1]
     formData['data'] = {}
-    for (let child of formContainer.children) {
+    for (let child of fieldsContainer.children) {
         const field_data = child.getElementsByClassName("form-field-data")
         const select_data = child.getElementsByClassName("form-select-data")[0]
+
+        const errorsField = child.getElementsByClassName("form-field-errors")
+        if (errorsField.length != 1) {
+            getForm()
+            return
+        }
+        errorsField[0].innerText = ""
 
 //        const classAttr = child.getAttribute("class")
 
@@ -71,28 +96,32 @@ function submitOpportunityForm() {
     })
     .then(async (response) => {
         if (response.status === 200) {
-            alert('Successfuly submitted for an opportunity')
+            getForm()
             return
         }
-        response_json = JSON.parse(await response.json());
+        response_json = await response.json()
         Object.keys(response_json).forEach(key => {
             response_json[key].forEach(error => {
-                const form_field = formContainer.querySelectorAll('[field_name=key]')
-                if (form_field) {
-                    form_field.innerText += error;
+                const form_field = fieldsContainer.querySelectorAll(`[field_name=${key}]`)
+                if (form_field.length == 1) {
+                    errorsField = form_field[0].getElementsByClassName("form-field-errors")
+                    if (errorsField.length != 1) {
+                        getForm()
+                        return
+                    }
+                    errorsField[0].innerText += error['message']
                 } else {
                     getForm()
+                    return
                 }
             })
         })
     })
 }
 
-document.getElementById("submit-btn").addEventListener('click', () => {
-    submitOpportunityForm()
-})
-
 document.addEventListener("DOMContentLoaded", () => {
+    transformTags()
+    transformGeoTags()
     getDescription()
     getForm()
 })

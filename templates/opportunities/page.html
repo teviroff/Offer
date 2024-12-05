@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Opportunities</title>
+</head>
+<body>
+    <h3>Filters</h3>
+    <div id="filters-container">
+        {{ providers|safe }}
+        {{ tags|safe }}
+        {{ geo_tags|safe }}
+    </div>
+    <button id="apply-filters-button">Apply</button>
+    <h2>Opportunities</h2>
+    <div id="cards-container"></div>
+</body>
+<script src="../scripts/elements.js"></script>
+<script src="../scripts/filters.js"></script>
+<script src="../scripts/opportunities.js"></script>
+</html>

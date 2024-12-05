@@ -12,23 +12,22 @@
     </div>
     <div>
         <h4>Provider</h4>
-        <img src="{{ provider_logo_url }}" style="max-width: 32px; max-height: 32px;">
-        <p>{{ provider_name }}</p>
+        <div id="provider-container" style="cursor:pointer"
+         onclick="document.location.href='/opportunities?provider_ids={{ provider_id }}'">
+            <img src="{{ provider_logo_url }}" style="max-width: 32px; max-height: 32px;">
+            <p>{{ provider_name }}</p>
+        </div>
     </div>
     <div>
         <h4>Tags</h4>
         <div id="tags-container">
-            {% for tag in tags %}
-            {{ tag|safe }}
-            {% endfor %}
+            {{ tags|safe }}
         </div>
     </div>
     <div>
         <h4>Geo Tags</h4>
         <div id="geotags-container">
-            {% for geotag in geo_tags %}
-            {{ geotag|safe }}
-            {% endfor %}
+            {{ geo_tags|safe }}
         </div>
     </div>
     <div>
@@ -39,10 +38,8 @@
         <h4>Form</h4>
         <div id="form-container"></div>
     </div>
-    <div>
-        <button id="submit-btn">Submit</button>
-    </div>
 </body>
+<script src="../scripts/elements.js"></script>
 <script src="../scripts/opportunity.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha512-LhccdVNGe2QMEfI3x4DVV3ckMRe36TfydKss6mJpdHjNFiV07dFpS2xzeZedptKZrwxfICJpez09iNioiSZ3hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </html>

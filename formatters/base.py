@@ -207,7 +207,7 @@ def transform_id_error_factory(human_field_name: str) -> SerializerErrorTransfor
         match error['type']:
             case 'missing':
                 return FieldErrorCode.MISSING, 'Missing required field'
-            case 'int_type':
+            case 'int_type' | 'int_parsing':
                 return FieldErrorCode.WRONG_TYPE, f'{human_field_name} must be an int'
             case 'greater_than_equal':
                 return FieldErrorCode.NOT_IN_RANGE, f'{human_field_name} must be greater than or equal to 1'
@@ -223,7 +223,7 @@ def transform_int_error_factory(human_field_name: str, *, ge: int | None = None,
         match error['type']:
             case 'missing':
                 return FieldErrorCode.MISSING, 'Missing required field'
-            case 'int_type':
+            case 'int_type' | 'int_parsing':
                 return FieldErrorCode.WRONG_TYPE, f'{human_field_name} must be an int'
             case 'greater_than_equal':
                 return FieldErrorCode.NOT_IN_RANGE, f'{human_field_name} must be greater than or equal to {ge}'

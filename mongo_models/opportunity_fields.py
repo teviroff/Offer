@@ -43,6 +43,8 @@ class FieldErrorCode(IntEnum):
     INVALID_PATTERN = 104
     INVALID_CHOICE = 105
 
+type FieldError = GenericError[FieldErrorCode, dict[str, Any]]
+
 class OpportunityField(mongo.EmbeddedDocument):
     meta = {'allow_inheritance': True, 'abstract': True}
 
@@ -50,7 +52,7 @@ class OpportunityField(mongo.EmbeddedDocument):
     type = mongo.EnumField(FieldType)
     is_required = mongo.BooleanField()
 
-    def validate_input(self, input: Any) -> None | GenericError[FieldErrorCode, int | None]: ...
+    def validate_input(self, field_name: str, input: Any) -> None | FieldError: ...
 
 class StringField(OpportunityField):
     max_length = mongo.IntField()
@@ -60,17 +62,18 @@ class StringField(OpportunityField):
         return StringField(label=data.label, type=FieldType.String, is_required=data.is_required,
                            max_length=data.max_length)
 
-    def validate_input(self, input: Any) -> None | GenericError[FieldErrorCode, int | None]:
+    def validate_input(self, field_name: str, input: Any) -> None | FieldError:
         if not isinstance(input, str):
             return GenericError(
                 error_code=FieldErrorCode.WRONG_TYPE,
                 error_message='Field input must be a string',
+                context={'field_name': field_name},
             )
         if self.max_length and len(input) > self.max_length:
             return GenericError(
                 error_code=FieldErrorCode.LENGTH_NOT_IN_RANGE,
-                error_message='Field input is too long',
-                context=self.max_length,
+                error_message=f'Field input can contain at most {self.max_length} symbols',
+                context={'field_name': field_name},
             )
 
     def to_dict(self) -> dict:
@@ -88,13 +91,14 @@ class RegexField(StringField):
         return RegexField(label=data.label, type=FieldType.Regex, is_required=data.is_required,
                           max_length=data.max_length, regex=data.regex)
 
-    def validate_input(self, input: Any) -> None | GenericError[FieldErrorCode, int | None]:
-        if error := super().validate_input(input):
+    def validate_input(self, field_name: str, input: Any) -> None | FieldError:
+        if error := super().validate_input(field_name, input):
             return error
         if not re.match(self.regex, input):
             return GenericError(
                 error_code=FieldErrorCode.INVALID_PATTERN,
                 error_message='Field input doesn\'t match expected pattern',
+                context={'field_name': field_name},
             )
 
     def to_dict(self) -> dict:
@@ -113,16 +117,18 @@ class ChoiceField(OpportunityField):
         return ChoiceField(label=data.label, type=FieldType.Choice, is_required=data.is_required,
                            choices=data.choices)
 
-    def validate_input(self, input: Any) -> None | GenericError[FieldErrorCode]:
+    def validate_input(self, field_name: str, input: Any) -> None | FieldError:
         if not isinstance(input, str):
             return GenericError(
                 error_code=FieldErrorCode.WRONG_TYPE,
                 error_message='Field input must be a string',
+                context={'field_name': field_name},
             )
         if input not in self.choices:
             return GenericError(
                 error_code=FieldErrorCode.INVALID_CHOICE,
                 error_message='Field input must be one of provided choices',
+                context={'field_name': field_name},
             )
 
     def to_dict(self) -> dict:
@@ -191,36 +197,34 @@ class ResponseData(mongo.Document):
     data = mongo.MapField(mongo.DynamicField())
 
     @classmethod
-    def create(cls, *, response_id: int, form: OpportunityForm, data: ser.OpportunityResponse.CreateFields) -> Self:
-        self = ResponseData(id=response_id, data=data.data)
+    def create(cls, *, response_id: int, form: OpportunityForm, data: ser.OpportunityResponse.CreateFields) \
+            -> Self | list[FieldError]:
+        response_data: dict[str, Any] = {}
+        errors: list[FieldError] = []
+        for name, value in data.data.items():
+            field = form.fields.get(name)
+            if field is None:
+                errors.append(GenericError(
+                    error_code=FieldErrorCode.EXTRA,
+                    error_message='Unexpected field',
+                    context={'field_name': name},
+                ))
+                continue
+            error = field.validate_input(name, value)
+            if error is None:
+                response_data[name] = value
+            else:
+                errors.append(error)
+        for name, field in form.fields.items():
+            if name in data.data or not field.is_required:
+                continue
+            errors.append(GenericError(
+                error_code=FieldErrorCode.MISSING,
+                error_message='Missing required field',
+                context={'field_name': name},
+            ))
+        if len(errors) > 0:
+            return errors
+        self = ResponseData(id=response_id, data=response_data)
         self.save()
         return self
-
-    # TODO: finish data validation
-    # @classmethod
-    # def create(cls, *, response_id: int, form: OpportunityForm, data: ser.OpportunityResponse.CreateFields) \
-    #         -> Self | dict[str, GenericError[FieldErrorCode, Any]]:
-    #     response_data: dict[str, Any] = {}
-    #     errors: dict[str, GenericError[FieldErrorCode, Any]] = {}
-    #     for name, value in data.data.items():
-    #         field = form.fields.get(name)
-    #         if field is None:
-    #             ...
-    #             fmt.CreateOpportunityResponseFormatter.append_field_error(
-    #                 errors, field_name=name, error=fmt.CreateOpportunityResponseFormatter.get_extra_field_error())
-    #             continue
-    #         error = field.validate_input(value)
-    #         if error is None:
-    #             response_data[name] = value
-    #         else:
-    #             fmt.CreateOpportunityResponseFormatter.append_field_error(errors, field_name=name, error=error)
-    #     for name, field in form.fields.items():
-    #         if name in data.data or not field.is_required:
-    #             continue
-    #         fmt.CreateOpportunityResponseFormatter.append_field_error(
-    #             errors, field_name=name, error=fmt.CreateOpportunityResponseFormatter.get_missing_field_error())
-    #     if len(errors) > 0:
-    #         return errors
-    #     self = ResponseData(id=response_id, data=response_data)
-    #     self.save()
-    #     return self

@@ -1,10 +1,7 @@
 import api
 import ui
-from config import app
-from minio import Minio
+from config import app, HOST, PORT
 from uvicorn import run
 
-import pymongo
-
 if __name__ == '__main__':
-    run('config:app')
+    run('config:app', host=HOST, port=PORT)
