@@ -1,27 +1,37 @@
 <!DOCTYPE html>
-
 <html>
-    <head></head>
-
-    <body>
-        <h2>LOGIN</h2>
-        <div id="login_form">
-            <p>
-                Email:<br>
-                <div>
-                    <input id="login_form_email" name="email" />
-                    <p></p>
-                </div>
-            </p>
-            <p>
-                Password:<br>
-                <div>
-                    <input id="login_form_password" name="password"/>
-                    <p></p>
-                </div>
-            </p>
-            <button id="login_form_btn">Submit</button>
+<head>
+    <link rel="stylesheet" href="../static/css/login.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <embed id="background-image" src="../static/svgs/background.svg"/>
+    <div id="login_form">
+        <div id="header">
+            <img src="../static/temp/chill.jpg" alt="logo">
+            <p id="header-greeting">Sign in to Offer</p>
         </div>
-    </body>
-<script src="../scripts/login.js"></script>
+        <div id="login-form-content">
+            <div id="login-form-email-div">
+                <label for="login_form_email">Email:</label>
+                <input id="login_form_email" name="email" placeholder="Email"/>
+            </div>
+            <div id="login-form-password-div">
+                <label for="login_form_password">Password: </label>
+                <input type="password" id="login_form_password" name="password" placeholder="Password"/>
+            </div>
+            <div id="login-form-btn-div">
+                <button id="login_form_btn">Sign in</button>
+            </div>
+        </div>
+        <div id="registration-div-form">
+            <div id="login-form-registration-div">
+                <p>New to Offer? <a href="">Create an account</a> </p>
+            </div>
+        </div>
+    </div>
+</body>
+<script src="../static/scripts/login.js"></script>
 </html>

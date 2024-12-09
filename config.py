@@ -22,7 +22,7 @@ from fastapi import FastAPI
 from starlette.staticfiles import StaticFiles
 
 app = FastAPI()
-app.mount('/scripts', StaticFiles(directory='scripts', html=True), name='scripts')
+app.mount('/static', StaticFiles(directory='static', html=True), name='static')
 
 from fastapi.templating import Jinja2Templates
 
