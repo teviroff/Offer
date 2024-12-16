@@ -3,47 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
+    <link rel="stylesheet" href="../static/css/opportunity/page.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <h2>Opportunity</h2>
-    <div>
-        <h4>Name</h4>
-        <p>{{ name }}</p>
-    </div>
-    <div>
-        <h4>Provider</h4>
-        <img src="{{ provider_logo_url }}" style="max-width: 32px; max-height: 32px;">
-        <p>{{ provider_name }}</p>
-    </div>
-    <div>
-        <h4>Tags</h4>
-        <div id="tags-container">
-            {% for tag in tags %}
-            {{ tag|safe }}
-            {% endfor %}
+    <embed id="background-image" src="../static/svgs/background.svg"/>
+    <div id="opportunity-form-div">
+        <div id="opportunity-form-header">
+            <div id="opportunity-form-name">
+                <p>{{ name }}</p>
+            </div>
+            <div id="opportunity-form-provider">
+                <h4>Provider:</h4>
+                <div id="provider-container" style="cursor:pointer"
+                onclick="document.location.href='/opportunities?provider_ids={{ provider_id }}'">
+                    <img id="provider-logo" src="{{ provider_logo_url }}">
+                    <p>{{ provider_name }}</p>
+                </div>
+            </div>
+            <div id="opportunity-form-tags">
+                <h4>Tags:</h4>
+                <div id="tags-container">
+                    {{ tags|safe }}
+                </div>
+            </div>
+            <div id="opportunity-form-geotags">
+                <h4>Geo Tags:</h4>
+                <div id="geotags-container">
+                    {{ geo_tags|safe }}
+                </div>
+            </div>
         </div>
-    </div>
-    <div>
-        <h4>Geo Tags</h4>
-        <div id="geotags-container">
-            {% for geotag in geo_tags %}
-            {{ geotag|safe }}
-            {% endfor %}
+        <div class="tab">
+          <button class="tab-links" onclick="changeTab(event, 0)">Description</button>
+          <button class="tab-links" onclick="changeTab(event, 1)">Submit</button>
+          <button class="tab-links" onclick="changeTab(event, 2)">Tracking</button>
         </div>
-    </div>
-    <div>
-        <h4>Description</h4>
-        <div id="description-container"></div>
-    </div>
-    <div>
-        <h4>Form</h4>
-        <div id="form-container">
-        </div> <!-- input data class = "form-field-data" , label data class = "form-label-data"-->
-    </div>
-    <div>
-        <button id="submit-btn">Submit</button>
+        <div id="opportunity-form-description" class="tab-content">
+            <div id="description-container"></div>
+        </div>
+        <div id="opportunity-form-container" class="tab-content">
+            <div id="form-container"></div>
+        </div>
+        <div id="opportunity-form-tracking" class="tab-content">
+            <div id="tracking-container"></div>
+        </div>
     </div>
 </body>
-<script src="../scripts/opportunity.js"></script>
+<script src="/static/scripts/elements.js"></script>
+<script src="/static/scripts/opportunity.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js" integrity="sha512-LhccdVNGe2QMEfI3x4DVV3ckMRe36TfydKss6mJpdHjNFiV07dFpS2xzeZedptKZrwxfICJpez09iNioiSZ3hA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </html>

@@ -12,8 +12,13 @@
 #     level=logging.DEBUG
 # )
 
-from fastapi.templating import Jinja2Templates
+from db import *
 
-templates = Jinja2Templates(directory='templates')
-
-print(templates.get_template('info/cv.html').render())
+with Session.begin() as session:
+    yandex_provider = session.get(OpportunityProvider, 1)
+    python_tag = session.get(OpportunityTag, 1)
+    cpp_tag = session.get(OpportunityTag, 2)
+    moscow_geo_tag = session.get(OpportunityGeoTag, 1)
+    spb_geo_tag = session.get(OpportunityGeoTag, 2)
+    print([opportunity.name for opportunity in
+           Opportunity.filter(session, providers=[yandex_provider], tags=[python_tag], geo_tags=[], page=1)])

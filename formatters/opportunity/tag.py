@@ -6,10 +6,6 @@ class CreateOpportunityTagFormatter(BaseSerializerFormatter, BaseDBFormatter):
     class ErrorCode(IntEnum):
         NON_UNIQUE_NAME = 200
 
-    # serializer_error_appender = APISerializerErrorAppender(
-    #     name=append_serializer_field_error_factory(transform_str_error_factory('Opportunity tag name', min_length=1,
-    #                                                                            max_length=50)),
-    # )
     serializer_error_appender = RootSerializerErrorAppender(
         query=APISerializerErrorAppender().append_error,
         body=BaseSerializerErrorAppender(
@@ -27,3 +23,11 @@ class CreateOpportunityTagFormatter(BaseSerializerFormatter, BaseDBFormatter):
         CreateOpportunityTagErrorCode.NON_UNIQUE_NAME:
             append_db_field_error_factory(field_name='name', transformer=transform_non_unique_name_error),
     })
+
+
+class GetOpportunityTagByID:
+    """Convenience class with DB error message."""
+
+    @classmethod
+    def create_db_error[T: IntEnum, C](cls, *, error_code: T, context: C) -> GenericError[T, C]:
+        return GenericError(error_code, 'Opportunity tag with provided id doesn\'t exist', context=context)

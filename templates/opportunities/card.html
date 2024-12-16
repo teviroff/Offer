@@ -1,0 +1,21 @@
+<div class="opportunity-card" style="cursor:pointer"
+ onclick="document.location.href='/opportunity/{{ opportunity_id }}'">
+    <div class="card-provider-container">
+        <img src="{{ provider_logo_url }}">
+        <p>{{ provider_name }}</p>
+    </div>
+    <div class="card-title-container">
+        <p class="card-title">{{ card_title }}</p>
+        <p class="card-subtitle">{{ card_subtitle }}</p>
+    </div>
+    <div class="card-tags">
+         <div class="card-tags-container">
+             <div class="card-geotag-container">
+                {{ geo_tags|safe }}
+             </div>
+             <div class="card-tag-container">
+                {{ tags|safe }}
+             </div>
+        </div>
+    </div>
+</div>

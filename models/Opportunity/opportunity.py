@@ -1,6 +1,7 @@
-from typing import Self, Union
+from typing import Any, Collection, Self, Union
 
 from minio import Minio, S3Error
+from sqlalchemy import select, func
 
 from utils import *
 from models.base import *
@@ -17,10 +18,6 @@ logger = logging.getLogger('database')
 class CreateOpportunityErrorCode(IntEnum):
     INVALID_PROVIDER_ID = 0
 
-class FilterOpportunityErrorCode(IntEnum):
-    INVALID_TAG_ID = 0
-    INVALID_GEO_TAG_ID = 1
-
 class AddOpportunityTagErrorCode(IntEnum):
     INVALID_OPPORTUNITY_ID = 0
     INVALID_TAG_ID = 1
@@ -29,7 +26,6 @@ class AddOpportunityGeoTagErrorCode(IntEnum):
     INVALID_OPPORTUNITY_ID = 0
     INVALID_GEO_TAG_ID = 1
 
-# TODO: update schema, description changes
 class Opportunity(Base):
     __tablename__ = 'opportunity'
 
@@ -42,8 +38,9 @@ class Opportunity(Base):
     tags: Mapped[set['OpportunityTag']] = relationship(secondary='opportunity_to_tag', back_populates='opportunities')
     geo_tags: Mapped[set['OpportunityGeoTag']] = relationship(secondary='opportunity_to_geo_tag',
                                                               back_populates='opportunities')
-    cards: Mapped[list['OpportunityCard']] = relationship(back_populates='opportunity')
-    responses: Mapped[list['response.OpportunityResponse']] = relationship(back_populates='opportunity')
+    card: Mapped['OpportunityCard'] = relationship(back_populates='opportunity', cascade='all, delete-orphan')
+    responses: Mapped[list['response.OpportunityResponse']] = relationship(back_populates='opportunity',
+                                                                           cascade='all, delete-orphan')
 
     @classmethod
     def create(cls, session: Session, fields: ser.Opportunity.Create) \
@@ -63,11 +60,30 @@ class Opportunity(Base):
     def get_form(self) -> OpportunityForm | None:
         return OpportunityForm.objects(id=self.id).first()
 
-    # TODO
     @classmethod
-    def filter(cls, session: Session, request: ser.Opportunity.Filter) \
-            -> list[Self] | list[GenericError[FilterOpportunityErrorCode]]:
-        ...
+    def filter(cls, session: Session, *, providers: Collection['OpportunityProvider'],
+               tags: Collection['OpportunityTag'], geo_tags: Collection['OpportunityGeoTag'],
+               page: int, public: bool = True) -> list['Opportunity']:
+        statement = select(Opportunity)
+        if len(providers) > 0:
+            statement = statement.where(Opportunity.provider_id.in_(provider.id for provider in providers))
+        if len(tags) > 0:
+            substatement = select(OpportunityToTag.opportunity_id) \
+                .where(OpportunityToTag.tag_id.in_(tag.id for tag in tags)) \
+                .group_by(OpportunityToTag.opportunity_id) \
+                .having(func.count(OpportunityToTag.tag_id) == len(tags))
+            statement = statement.where(Opportunity.id.in_(substatement))
+        if len(geo_tags) > 0:
+            substatement = select(OpportunityToGeoTag.opportunity_id) \
+                .where(OpportunityToGeoTag.geo_tag_id.in_(geo_tag.id for geo_tag in geo_tags)) \
+                .group_by(OpportunityToGeoTag.opportunity_id) \
+                .having(func.count(OpportunityToGeoTag.geo_tag_id) > 0)
+            statement = statement.where(Opportunity.id.in_(substatement))
+        if public:
+            statement = statement.where(Opportunity.card != None)
+        PAGE_SIZE: int = 12  # TODO: find better place for this constant
+        statement = statement.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE)
+        return session.execute(statement).scalars().all()
 
     def add_tags(self, session: Session, fields: ser.Opportunity.AddTags) \
             -> None | list[GenericError[AddOpportunityTagErrorCode, int | None]]:
@@ -76,7 +92,7 @@ class Opportunity(Base):
             tag: Union['OpportunityTag', None] = session.query(OpportunityTag).get(tag_id)
             if tag is None:
                 logger.debug('\'Opportunity.add_tags\' generated \'INVALID_TAG_ID\' error (opportunity_id=%i, '
-                             'tag_id=%i)', fields.opportunity_id, tag_id)
+                             'tag_id=%i)', self.id, tag_id)
                 tag_errors.append(
                     GenericError(error_code=AddOpportunityTagErrorCode.INVALID_TAG_ID,
                                  error_message='Opportunity tag with provided id doesn\'t exist', context=i)
@@ -109,10 +125,11 @@ class Opportunity(Base):
 
         minio_client.put_object('opportunity-description', f'{self.id}.md', file.stream, file.size)
 
-    def get_dict(self) -> dict:
+    def get_dict(self) -> dict[str, Any]:
         return {
             'name': self.name,
-            'provider_logo_url': f'/api/opportunity-provider/logo/{self.provider_id}',
+            'provider_id': self.provider.id,
+            'provider_logo_url': self.provider.logo_url,
             'provider_name': self.provider.name,
             'tags': [(tag.id, tag.name) for tag in self.tags],
             'geo_tags': [(geo_tag.id, geo_tag.city.name) for geo_tag in self.geo_tags],
@@ -131,8 +148,18 @@ class Opportunity(Base):
             response.release_conn()
         return description
 
+    def get_card_dict(self) -> dict[str, Any]:
+        return {
+            'opportunity_id': self.id,
+            'provider_logo_url': self.provider.logo_url,
+            'provider_name': self.provider.name,
+            'card_title': self.card.title,
+            'card_subtitle': self.card.subtitle,
+            'tags': [(tag.id, tag.name) for tag in self.tags],
+            'geo_tags': [(geo_tag.id, geo_tag.city.name) for geo_tag in self.geo_tags],
+        }
 
-# TODO: change schema, logo changes
+
 class OpportunityProvider(Base):
     __tablename__ = 'opportunity_provider'
 
@@ -147,7 +174,11 @@ class OpportunityProvider(Base):
         session.add(provider)
         return provider
 
-    def get_avatar(self, minio_client: Minio) -> bytes:
+    @property
+    def logo_url(self) -> str:
+        return f'/api/opportunity-provider/logo/{self.id}'
+
+    def get_logo(self, minio_client: Minio) -> bytes:
         response = None
         try:
             response = minio_client.get_object('opportunity-provider-logo', f'{self.id}.png')
@@ -243,30 +274,18 @@ class OpportunityToGeoTag(Base):
     geo_tag_id: Mapped[int] = mapped_column(ForeignKey('opportunity_geo_tag.id'), primary_key=True)
 
 
-class CreateOpportunityCardErrorCode(IntEnum):
-    INVALID_OPPORTUNITY_ID = 0
-
 class OpportunityCard(Base):
     __tablename__ = 'opportunity_card'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     opportunity_id: Mapped[int] = mapped_column(ForeignKey('opportunity.id'))
     title: Mapped[str] = mapped_column(String(30))
-    sub_title: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    subtitle: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
-    opportunity: Mapped['Opportunity'] = relationship(back_populates='cards')
+    opportunity: Mapped['Opportunity'] = relationship(back_populates='card')
 
     @classmethod
-    def create(cls, session: Session, request: ser.OpportunityCard.Create) \
-            -> Self | GenericError[CreateOpportunityCardErrorCode]:
-        opportunity: Opportunity | None = session.query(Opportunity).get(request.opportunity_id)
-        if opportunity is None:
-            logger.debug('\'OpportunityCard.create\' exited with \'INVALID_OPPORTUNITY_ID\' error (opportunity_id=%i)',
-                         request.opportunity_id)
-            return GenericError(
-                error_code=CreateOpportunityCardErrorCode.INVALID_OPPORTUNITY_ID,
-                error_message='Opportunity with given id doesn\'t exist',
-            )
-        card = OpportunityCard(opportunity=opportunity, title=request.title, sub_title=request.sub_title)
+    def create(cls, session: Session, opportunity: Opportunity, fields: ser.OpportunityCard.Create) -> Self:
+        card = OpportunityCard(opportunity=opportunity, title=fields.title, subtitle=fields.subtitle)
         session.add(card)
         return card

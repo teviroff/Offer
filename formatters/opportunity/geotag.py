@@ -1,5 +1,3 @@
-from dns.e164 import query
-
 from formatters.base import *
 from models.opportunity.opportunity import CreateOpportunityGeoTagErrorCode
 
@@ -8,10 +6,6 @@ class CreateOpportunityGeoTagFormatter(BaseSerializerFormatter, BaseDBFormatter)
     class ErrorCode(IntEnum):
         INVALID_CITY_ID = 200
         NON_UNIQUE_CITY = 201
-
-    # serializer_error_appender = APISerializerErrorAppender(
-    #     city_id=append_serializer_field_error_factory(transform_id_error_factory('City id')),
-    # )
 
     serializer_error_appender = RootSerializerErrorAppender(
         query=APISerializerErrorAppender().append_error,
@@ -35,3 +29,10 @@ class CreateOpportunityGeoTagFormatter(BaseSerializerFormatter, BaseDBFormatter)
         CreateOpportunityGeoTagErrorCode.NON_UNIQUE_CITY:
             append_db_field_error_factory(field_name='city_id', transformer=transform_non_unique_city_error),
     })
+
+class GetOpportunityGeoTagByID:
+    """Convenience class with DB error message."""
+
+    @classmethod
+    def create_db_error[T: IntEnum, C](cls, *, error_code: T, context: C) -> GenericError[T, C]:
+        return GenericError(error_code, 'Opportunity geo tag with provided id doesn\'t exist', context=context)

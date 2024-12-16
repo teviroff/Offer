@@ -1,5 +1,6 @@
 from typing import Self
 from datetime import datetime
+
 from serializers.base import *
 from pydantic import model_validator
 from pydantic_core import PydanticCustomError
@@ -32,11 +33,13 @@ class Country(BaseModel):
     model_config = {'extra': 'ignore'}
 
     name: Annotated[str, Field(min_length=1, max_length=50)]
-    phone_code: Annotated[int, Field(ge=1, lt=1000)]
+    phone_code: Annotated[int, Field(ge=1, le=999)]
 
 
 class City(BaseModel):
     model_config = {'extra': 'ignore'}
 
-    country_id: ID
     name: Annotated[str, Field(min_length=1, max_length=50)]
+
+class CreateCityQueryParameters(QueryParameters):
+    country_id: ID

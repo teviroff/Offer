@@ -38,9 +38,6 @@ class Country(Base):
         return country
 
 
-class CreateCityErrorCode(IntEnum):
-    INVALID_COUNTRY_ID = 0
-
 class City(Base):
     __tablename__ = 'city'
 
@@ -51,14 +48,7 @@ class City(Base):
     country: Mapped['Country'] = relationship(back_populates='cities')
 
     @classmethod
-    def create(cls, session: Session, fields: ser.auxillary.City) -> Self | GenericError[CreateCityErrorCode]:
-        country: Country | None = session.query(Country).get(fields.country_id)
-        if country is None:
-            logger.debug('\'City.create\' exited with \'INVALID_COUNTRY_ID\' error (country_id=%i)', fields.country_id)
-            return GenericError(
-                error_code=CreateCityErrorCode.INVALID_COUNTRY_ID,
-                error_message='Country with provided if doesn\'t exist'
-            )
+    def create(cls, session: Session, country: Country, fields: ser.auxillary.City) -> Self:
         city = City(country=country, name=fields.name)
         session.add(city)
         return city

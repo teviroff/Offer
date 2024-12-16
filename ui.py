@@ -1,9 +1,10 @@
+import json
 from typing import Annotated
 from enum import IntEnum
 from ipaddress import IPv4Address
 
 from pydantic import ValidationError
-from fastapi import UploadFile, Path
+from fastapi import UploadFile, Path, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse, HTMLResponse
@@ -15,6 +16,9 @@ import serializers.mod as ser
 import formatters.mod as fmt
 import middleware as mw
 
+
+def hidden_json_html(text: str, *, _id: str | None = None, _class: str | None = None) -> str:
+    return f'<p {f"id=\"{_id}\"" if _id else ""} {f"class=\"{_class}\"" if _class else ""} hidden>{text}</p>'
 
 def get_api_key_model(request: Request) -> ser.APIKey | ValidationError:
     """Extract 'api_key' from request cookies and validate it."""
@@ -64,7 +68,7 @@ def get_personal_api_key(request: Request, session: Session, key: ser.APIKey) \
         return GetPersonalAPIKeyErrorCode.DOESNT_EXIST
     if not isinstance(api_key, db.PersonalAPIKey):
         return GetPersonalAPIKeyErrorCode.NOT_PERSONAL
-    if not LOCAL and (str(api_key.ip) != request.client.host or api_key.port != request.client.port):
+    if str(api_key.ip) != request.client.host:
         api_key.expire(session)
         return GetPersonalAPIKeyErrorCode.WRONG_CLIENT
     return api_key
@@ -303,6 +307,12 @@ def get_opportunity_by_id(session: Session, opportunity_id: ser.ID) -> db.Opport
 
     return session.get(db.Opportunity, opportunity_id)
 
+def get_opportunity_by_id_error(code: int) -> fmt.ErrorTrace:
+    return fmt.GetOpportunityByIDFormatter.get_db_error(code=code)
+
+def get_opportunity_by_id_error_response(code: int) -> JSONResponse:
+    return JSONResponse(get_opportunity_by_id_error(code), status_code=422)
+
 @app.get('/opportunity/{opportunity_id}')
 def opportunity(request: Request, opportunity_id: Annotated[int, Path(ge=1)]):
     api_key = get_optional_api_key_model(request)
@@ -318,10 +328,10 @@ def opportunity(request: Request, opportunity_id: Annotated[int, Path(ge=1)]):
         if opportunity is None:
             return page_not_found_response(request)
         context = opportunity.get_dict()
-    context['tags'] = [templates.get_template('opportunity/tag.html').render(id=tag_id, name=name)
-                       for tag_id, name in context['tags']]
-    context['geo_tags'] = [templates.get_template('opportunity/geotag.html').render(id=tag_id, city_name=city_name)
-                           for tag_id, city_name in context['geo_tags']]
+    context['tags'] = hidden_json_html(f'[{",".join(json.dumps({"id": tag_id, "name": name})
+                                                    for tag_id, name in context["tags"])}]')
+    context['geo_tags'] = hidden_json_html(f'[{",".join(json.dumps({"id": tag_id, "name": city_name})
+                                                        for tag_id, city_name in context["geo_tags"])}]')
     return templates.TemplateResponse(request, 'opportunity/page.html', context=context)
 
 @app.get('/opportunity/{opportunity_id}/description')
@@ -352,36 +362,96 @@ async def get_opportunity_form(request: Request, opportunity_id: Annotated[int, 
         if opportunity is None:
             return page_not_found_response(request)
         fields = opportunity.get_form()
+        already_responded = \
+            any(response.opportunity_id == opportunity_id for response in personal_api_key.user.responses)
     if fields is None:
         return HTMLResponse()
-    content = ''
+    fields_html = ''
     field_type_to_template = {
         db.OpportunityFieldType.String: 'opportunity/fields/string.html',
         db.OpportunityFieldType.Regex: 'opportunity/fields/regex.html',
         db.OpportunityFieldType.Choice: 'opportunity/fields/choice.html',
     }
     for name, field in fields.fields.items():
-        content += templates.get_template(field_type_to_template[field.type]).render(**field.to_dict(), name=name)
-    return HTMLResponse(content)
+        fields_html += templates.get_template(field_type_to_template[field.type]).render(**field.to_dict(), name=name)
+    return HTMLResponse(
+        templates.get_template('opportunity/form.html').render(fields=fields_html,
+                                                               already_responded=already_responded)
+    )
 
-# carddata = {
-#     'title': 'C# Junior Desktop',
-#     'sub_title': 'MaUI .NET',
-#     'provider': {
-#         'name': 'MICROSOFT'
-#     },
-#     'tags': [{'name': 'C#'}, {'name': 'MaUI'}],
-#     'geo_tags': [{'city_name': 'Moscow'}, {'city_name': 'Peter'}]
-# }
-# @app.get('/card')
-# def card(request: Request):
-#     carddata['request'] = request
-#     return templates.TemplateResponse(name='card.html', context=carddata)
+@app.post('/opportunity/form')
+async def create_opportunity_response(request: Request, fields: ser.OpportunityResponse.Create) -> JSONResponse:
+    class ErrorCode(IntEnum):
+        INVALID_OPPORTUNITY_ID = 200
 
-# @app.post('/getcities')
-# async def GetCities(request: Request):
-#     country = (await request.json()).get('country')
-#
-#     print(countries[country])
-#     return JSONResponse(content=countries[country], status_code=200)
-#
+    api_key = get_api_key_model(request)
+    if not isinstance(api_key, ser.APIKey):
+        return get_api_key_error_json(api_key)
+    with db.Session.begin() as session:
+        personal_api_key = get_personal_api_key(request, session, api_key)
+        if not isinstance(personal_api_key, db.PersonalAPIKey):
+            return get_personal_api_key_error_json()
+        opportunity = get_opportunity_by_id(session, fields.opportunity_id)
+        if opportunity is None:
+            return get_opportunity_by_id_error_response(ErrorCode.INVALID_OPPORTUNITY_ID)
+        response = mw.create_opportunity_response(session, personal_api_key.user, opportunity, fields)
+        if not isinstance(response, db.OpportunityResponse):
+            session.rollback()
+            return JSONResponse(response, status_code=422)
+    return JSONResponse({})
+
+register_request_validation_error_handler(
+    '/opportunity/form', 'POST',
+    handler=default_request_validation_error_handler_factory(
+        fmt.CreateOpportunityResponseFormatter.format_serializer_errors)
+)
+
+@app.get('/opportunities')
+def opportunities(
+    request: Request,
+    filters: Annotated[ser.Opportunity.Filter, Query(default_factory=ser.Opportunity.Filter)],
+):
+    api_key = get_optional_api_key_model(request)
+    if api_key is None:
+        return RedirectResponse('/login')
+    if not isinstance(api_key, ser.APIKey):
+        return get_api_key_error_redirect(api_key)
+    with db.Session.begin() as session:
+        personal_api_key = get_personal_api_key(request, session, api_key)
+        if not isinstance(personal_api_key, db.PersonalAPIKey):
+            return get_personal_api_key_error_redirect(personal_api_key)
+        filter = mw.validate_filter(session, filters)
+        if not isinstance(filter, tuple):
+            return RedirectResponse('/opportunities')
+        context = {
+            'providers': hidden_json_html(f'[{",".join(json.dumps({"id": provider.id, "name": provider.name})
+                                                       for provider in filter[0])}]'),
+            'tags': hidden_json_html(f'[{",".join(json.dumps({"id": tag.id, "name": tag.name})
+                                                  for tag in filter[1])}]'),
+            'geo_tags': hidden_json_html(f'[{",".join(json.dumps({"id": geo_tag.id, "name": geo_tag.city.name})
+                                                      for geo_tag in filter[2])}]')
+        }
+    return templates.TemplateResponse(request, 'opportunities/page.html', context=context)
+
+@app.post('/opportunities/cards')
+async def get_opportunity_cards(request: Request, body: ser.Opportunity.Filter):
+    api_key = get_api_key_model(request)
+    if not isinstance(api_key, ser.APIKey):
+        return page_access_forbidden(request)
+    with db.Session.begin() as session:
+        personal_api_key = get_personal_api_key(request, session, api_key)
+        if not isinstance(personal_api_key, db.PersonalAPIKey):
+            return page_access_forbidden(request)
+        opportunities = mw.filter_opportunities(session, body)
+        if not isinstance(opportunities, list):
+            return JSONResponse(opportunities, status_code=422)
+        contexts = [opportunity.get_card_dict() for opportunity in opportunities]
+    card_template = templates.get_template('opportunities/card.html')
+    cards_html = ''
+    for context in contexts:
+        context['tags'] = hidden_json_html(f'[{",".join(json.dumps({"id": tag_id, "name": name})
+                                                        for tag_id, name in context["tags"])}]')
+        context['geo_tags'] = hidden_json_html(f'[{",".join(json.dumps({"id": tag_id, "name": city_name})
+                                                            for tag_id, city_name in context["geo_tags"])}]')
+        cards_html += card_template.render(context)
+    return HTMLResponse(cards_html)

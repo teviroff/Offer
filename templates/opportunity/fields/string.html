@@ -1,4 +1,7 @@
 <div class="string-form-field" field_name="{{ name }}">
     <p class="form-label-data">{{ label }}</p>
-    <input class="form-field-data" type="text" maxlength="{{ max_length }}">
+    <input class="form-field-data" type="text"
+     {% if max_length %} maxlength="{{ max_length }}" {% endif %}
+     {% if is_required %} is_required="{{ is_required }}" {% endif %}>
+    <p class="form-field-errors"></p>
 </div>

@@ -16,7 +16,7 @@ from models.opportunity.opportunity import (
 from mongo_models.opportunity_fields import (
     OpportunityForm, FieldType as OpportunityFieldType,
 )
-from models.opportunity.response import OpportunityResponse, ResponseStatus
+from models.opportunity.response import OpportunityResponse
 
 import dbconfig as dbcfg
 

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Opportunities</title>
+    <link rel="stylesheet" href="../static/css/opportunities/page.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+
+</head>
+<body>
+    <embed id="background-image" src="../static/svgs/background.svg"/>
+        <div id="opportunities-form">
+            <div id="opportunities-filter-div">
+                <div id="opportunities-filter">
+                    <div id="filters-container">
+                        {{ providers|safe }}
+                        {{ tags|safe }}
+                        {{ geo_tags|safe }}
+                    </div>
+                    <button id="apply-filters-button">Apply</button>
+                </div>
+            </div>
+            <div id="opportunities-container-div">
+                <div id="cards-container"></div>
+            </div>
+        </div>
+</body>
+<script src="/static/scripts/elements.js"></script>
+<script src="/static/scripts/filters.js"></script>
+<script src="/static/scripts/opportunities.js"></script>
+</html>

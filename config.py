@@ -2,8 +2,6 @@ import logging
 import os
 from datetime import datetime
 
-LOCAL: bool = True
-
 LOG_FOLDER = datetime.now().strftime('%d.%m.%Y')
 LOG_FILENAME = f'{datetime.now().timestamp()}'
 
@@ -16,6 +14,10 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger('application')
+
+# Starlette settings
+HOST: str = '127.0.0.1'
+PORT: int = 8000
 
 
 from fastapi import FastAPI

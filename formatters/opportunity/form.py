@@ -1,6 +1,7 @@
 from copy import copy
 
 from formatters.base import *
+from mongo_models.opportunity_fields import FieldErrorCode
 
 
 class YandexFormsSubmitMethodFormatter(BaseSerializerFormatter):
@@ -74,3 +75,14 @@ class UpdateOpportunityFormFieldsFormatter(BaseSerializerFormatter):
             ),
         ).append_error,
     )
+
+    @classmethod
+    def format_db_errors(cls, errors: list[GenericError[FieldErrorCode, dict[str, Any]]]) -> ErrorTrace:
+        formatted_errors: ErrorTrace = {}
+        for error in errors:
+            if error.context['field_name'] not in formatted_errors:
+                formatted_errors[error.context['field_name']] = []
+            formatted_errors[error.context['field_name']].append({
+                'type': error.error_code, 'message': error.error_message
+            })
+        return formatted_errors

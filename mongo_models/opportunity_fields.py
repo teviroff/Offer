@@ -1,8 +1,10 @@
-from typing import Self
+from typing import Any, Self
 from enum import StrEnum
+import re
 
 import mongoengine as mongo
 
+from utils import *
 import serializers.mod as ser
 
 
@@ -33,13 +35,24 @@ class FieldType(StrEnum):
     Regex = 'regex'
     Choice = 'choice'
 
-# TODO: integrate field error messages in here
+class FieldErrorCode(IntEnum):
+    MISSING = 100
+    EXTRA = 101
+    WRONG_TYPE = 102
+    LENGTH_NOT_IN_RANGE = 103
+    INVALID_PATTERN = 104
+    INVALID_CHOICE = 105
+
+type FieldError = GenericError[FieldErrorCode, dict[str, Any]]
+
 class OpportunityField(mongo.EmbeddedDocument):
-    meta = {'allow_inheritance': True}
+    meta = {'allow_inheritance': True, 'abstract': True}
 
     label = mongo.StringField()
     type = mongo.EnumField(FieldType)
     is_required = mongo.BooleanField()
+
+    def validate_input(self, field_name: str, input: Any) -> None | FieldError: ...
 
 class StringField(OpportunityField):
     max_length = mongo.IntField()
@@ -49,10 +62,24 @@ class StringField(OpportunityField):
         return StringField(label=data.label, type=FieldType.String, is_required=data.is_required,
                            max_length=data.max_length)
 
+    def validate_input(self, field_name: str, input: Any) -> None | FieldError:
+        if not isinstance(input, str):
+            return GenericError(
+                error_code=FieldErrorCode.WRONG_TYPE,
+                error_message='Field input must be a string',
+                context={'field_name': field_name},
+            )
+        if self.max_length and len(input) > self.max_length:
+            return GenericError(
+                error_code=FieldErrorCode.LENGTH_NOT_IN_RANGE,
+                error_message=f'Field input can contain at most {self.max_length} symbols',
+                context={'field_name': field_name},
+            )
+
     def to_dict(self) -> dict:
         return {
             'label': self.label,
-            'is_requred': self.is_required,
+            'is_required': self.is_required,
             'max_length': self.max_length,
         }
 
@@ -64,10 +91,20 @@ class RegexField(StringField):
         return RegexField(label=data.label, type=FieldType.Regex, is_required=data.is_required,
                           max_length=data.max_length, regex=data.regex)
 
+    def validate_input(self, field_name: str, input: Any) -> None | FieldError:
+        if error := super().validate_input(field_name, input):
+            return error
+        if not re.match(self.regex, input):
+            return GenericError(
+                error_code=FieldErrorCode.INVALID_PATTERN,
+                error_message='Field input doesn\'t match expected pattern',
+                context={'field_name': field_name},
+            )
+
     def to_dict(self) -> dict:
         return {
             'label': self.label,
-            'is_requred': self.is_required,
+            'is_required': self.is_required,
             'max_length': self.max_length,
             'regex': self.regex,
         }
@@ -80,10 +117,24 @@ class ChoiceField(OpportunityField):
         return ChoiceField(label=data.label, type=FieldType.Choice, is_required=data.is_required,
                            choices=data.choices)
 
+    def validate_input(self, field_name: str, input: Any) -> None | FieldError:
+        if not isinstance(input, str):
+            return GenericError(
+                error_code=FieldErrorCode.WRONG_TYPE,
+                error_message='Field input must be a string',
+                context={'field_name': field_name},
+            )
+        if input not in self.choices:
+            return GenericError(
+                error_code=FieldErrorCode.INVALID_CHOICE,
+                error_message='Field input must be one of provided choices',
+                context={'field_name': field_name},
+            )
+
     def to_dict(self) -> dict:
         return {
             'label': self.label,
-            'is_requred': self.is_required,
+            'is_required': self.is_required,
             'choices': self.choices,
         }
 
@@ -139,3 +190,41 @@ class OpportunityForm(mongo.Document):
 
         self.fields = self.create_fields(fields)
         self.save()
+
+
+class ResponseData(mongo.Document):
+    id = mongo.IntField(primary_key=True)
+    data = mongo.MapField(mongo.DynamicField())
+
+    @classmethod
+    def create(cls, *, response_id: int, form: OpportunityForm, data: ser.OpportunityResponse.CreateFields) \
+            -> Self | list[FieldError]:
+        response_data: dict[str, Any] = {}
+        errors: list[FieldError] = []
+        for name, value in data.data.items():
+            field = form.fields.get(name)
+            if field is None:
+                errors.append(GenericError(
+                    error_code=FieldErrorCode.EXTRA,
+                    error_message='Unexpected field',
+                    context={'field_name': name},
+                ))
+                continue
+            error = field.validate_input(name, value)
+            if error is None:
+                response_data[name] = value
+            else:
+                errors.append(error)
+        for name, field in form.fields.items():
+            if name in data.data or not field.is_required:
+                continue
+            errors.append(GenericError(
+                error_code=FieldErrorCode.MISSING,
+                error_message='Missing required field',
+                context={'field_name': name},
+            ))
+        if len(errors) > 0:
+            return errors
+        self = ResponseData(id=response_id, data=response_data)
+        self.save()
+        return self

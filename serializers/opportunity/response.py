@@ -1,9 +1,12 @@
+from typing import Any
+
 from serializers.base import *
 
 
-class Create(BaseModel):
+class CreateFields(BaseModel):
     model_config = {'extra': 'ignore'}
 
-    api_key: API_KEY
-    user_id: ID
+    data: dict[str, Any]
+
+class Create(CreateFields):
     opportunity_id: ID

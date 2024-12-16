@@ -1,3 +1,24 @@
+let defaultTabId = 0
+let activeTabId = 0
+
+function transformTags() {
+    const tagsContainer = document.getElementById("tags-container")
+    const tagsJSON = tagsContainer.children[0].innerText
+    JSON.parse(tagsJSON).forEach((tag) => {
+        tagsContainer.appendChild(createTag(tag["id"], tag["name"]))
+    })
+    tagsContainer.removeChild(tagsContainer.children[0])
+}
+
+function transformGeoTags() {
+    const geotagsContainer = document.getElementById("geotags-container")
+    const tagsJSON = geotagsContainer.children[0].innerText
+    JSON.parse(tagsJSON).forEach((tag) => {
+        geotagsContainer.appendChild(createGeoTag(tag["id"], tag["name"]))
+    })
+    geotagsContainer.removeChild(geotagsContainer.children[0])
+}
+
 function getDescription() {
     const descriptionContainer = document.getElementById("description-container")
     fetch(`${document.location.href}/description`, {
@@ -20,47 +41,73 @@ function getForm() {
     .then(async (response) => {
         if (response.status === 200) {
             formContainer.innerHTML = await response.text()
-            // ...
+            submitButton = document.getElementById("form-submit-button")
+            submitButton.addEventListener('click', submitOpportunityForm)
             return
         }
         formContainer.textContent = "Some error occured, refresh page to see opportunity response form"
     })
 }
 
+function createErrorBlock(error_string) {
+    const p_block = document.createElement("p");
+    p_block.innerText = error_string;
+    return p_block;
+}
+
 function submitOpportunityForm() {
-    const formContainer = document.getElementById("form-container")
+    const fieldsContainer = document.getElementById("form-fields-container")
     formData = {}
-    for (let child of formContainer.children) {
+    url_parts = document.location.href.split('/')
+    formData['opportunity_id'] = url_parts[url_parts.length - 1]
+    formData['data'] = {}
+    for (let child of fieldsContainer.children) {
         const field_data = child.getElementsByClassName("form-field-data")
-        const label_data = child.getElementsByClassName("form-label-data")[0]
         const select_data = child.getElementsByClassName("form-select-data")[0]
 
+        const errorsField = child.getElementsByClassName("form-field-errors")
+        if (errorsField.length != 1) {
+            getForm()
+            return
+        }
+        errorsField[0].innerText = ""
         const classAttr = child.getAttribute("class")
+        console.log(classAttr)
 
-        switch (classAttr) {
-            case "string-form-field":
-                if (field_data[0].length > 128) {
-                    label_data[0].innerText += "String variable must be less 128 characters"
-                    return
+        if (classAttr === "string-form-field") {
+            const string_field = child.getElementsByClassName("form-field-data")[0]
+
+            is_required = string_field.getAttribute("is_required")
+            if (is_required && !string_field.checkValidity() || string_field.value === "") {
+                const string_label = child.getElementsByClassName("form-label-data")[0]
+                const string_errors = child.getElementsByClassName("form-field-errors")[0]
+                if (is_required && string_field.value === "") {
+                    string_errors.appendChild(createErrorBlock(string_label.innerText + " field is required"))
                 }
-                break
-            case "regex-form-field":
-                regex_string = field_data[0].getAttribute("pattern")
-                if (!new RegExp(regex_string).test(field_data[0].innerText)) {
-                    label_data[0].innerText += "String must match the regex " + regex_string
-                    return
+                return;
+            }
+        }  else if (classAttr === "regex-form-field") {
+            const regex_field = child.getElementsByClassName("form-field-data")[0]
+            is_required = regex_field.getAttribute("is_required")
+            if (is_required && !regex_field.checkValidity() || regex_field.value === "") {
+                const regex_errors = child.getElementsByClassName("form-field-errors")[0]
+                const regex_label = child.getElementsByClassName("form-label-data")[0]
+                if (is_required && regex_field.value === "") {
+                    regex_errors.appendChild(createErrorBlock(regex_label.innerText + " field is required"));
+                } else if (!regex_field.checkValidity()) {
+                    regex_errors.appendChild(createErrorBlock(regex_label.innerText + " not validated"));
                 }
-                break
+                return;
+            }
         }
 
         if (field_data.length > 0) {
-            formData[label_data.innerText] = field_data[0].value;
+            formData['data'][child.getAttribute('field_name')] = field_data[0].value;
         } else {
-            formData[label_data.innerText] = select_data.options[select_data.selectedIndex].text;
+            formData['data'][child.getAttribute('field_name')] = select_data.options[select_data.selectedIndex].text;
         }
     }
-    console.log(JSON.stringify(formData));
-    fetch(`...`, {
+    fetch(`/opportunity/form`, {
         method: "POST",
         body: JSON.stringify(formData),
         headers: {
@@ -69,26 +116,58 @@ function submitOpportunityForm() {
     })
     .then(async (response) => {
         if (response.status === 200) {
-            response_json = JSON.parse(await response.json());
-            Object.keys(response_json).forEach(key => {
-                response_json[key].forEach(error => {
-                    const form_field = formContainer.querySelectorAll('[field_name=key]')
-                    if (form_field) {
-                        form_field.innerText += error;
-                    } else {
-                        getForm()
-                    }
-                })
-            })
+            getForm()
+            return
         }
+        response_json = await response.json()
+        Object.keys(response_json).forEach(key => {
+            response_json[key].forEach(error => {
+                const form_field = fieldsContainer.querySelectorAll(`[field_name=${key}]`)
+                if (form_field.length == 1) {
+                    errorsField = form_field[0].getElementsByClassName("form-field-errors")
+                    if (errorsField.length != 1) {
+                        getForm()
+                        return
+                    }
+                    errorsField[0].innerText += error['message']
+                } else {
+                    getForm()
+                    return
+                }
+            })
+        })
     })
 }
 
-document.getElementById("submit-btn").addEventListener('click', () => {
-    submitOpportunityForm()
-})
+function activateTab(button, tabId) {
+    let tab = document.getElementsByClassName("tab-content")[tabId]
+    tab.style.display = "block";
+    button.classList.add("active")
+    activeTabId = tabId;
+}
+
+function deactivateTab(tabId) {
+    let tab = document.getElementsByClassName("tab-content")[tabId]
+    tab.style.display = "none";
+    document.getElementsByClassName("tab-links")[tabId].classList.remove("active")
+}
+
+function changeTab(event, tabId) {
+    deactivateTab(activeTabId)
+    activateTab(event.currentTarget, tabId)
+    activeTabId = tabId;
+}
+
+function setDefaultTab() {
+    const defaultButton = document.getElementsByClassName("tab-links")[defaultTabId]
+    activateTab(defaultButton, defaultTabId)
+    activeTabId = defaultTabId;
+}
 
 document.addEventListener("DOMContentLoaded", () => {
+    transformTags()
+    transformGeoTags()
     getDescription()
     getForm()
+    setDefaultTab()
 })

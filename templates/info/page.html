@@ -3,63 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
+    <link rel="stylesheet" href="../static/css/info/page.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <h2>User Info</h2>
-    <div>
-        <p>Avatar</p>
-        <img id="avatar-img" src="{{ avatar_url }}" style="max-width: 32px; max-height: 32px;">
-    </div>
-    <div>
-        <input type="file" id="avatar-field" accept=".png">
-        <p></p>
-    </div>
-    <button id="avatar-upload">Update</button>
-    <p>
-        Name<br>
-        <div>
-            {% if name %}
-                <input type="text" value={{name}} id="namefield">
-            {% else %}
-                <input type="text" id="namefield">
-            {% endif %}
-            <p></p>
+    <embed id="background-image" src="../static/svgs/background.svg"/>
+    <div id="profile-form">
+        <div id="profile-main-data">
+        <div id="profile-avatar-div">
+            <img id="avatar-img" src="{{ avatar_url }}">
         </div>
-    </p>
-    <p>
-        Surname<br>
-        <div>
-            {% if surname %}
-                <input type="text" value={{surname}} id="surnamefield">
-            {% else %}
-                <input type="text" id="surnamefield">
-            {% endif %}
-            <p></p>
+        <div id="profile-name-div">
+            <div>
+                <label for="namefield">Name</label>
+                {% if name %}
+                    <input type="text" value={{name}} id="namefield">
+                {% else %}
+                    <input type="text" id="namefield">
+                {% endif %}
+                <p></p>
+            </div>
         </div>
-    </p>
-    <p>
-        Birthday<br>
-        <div>
-            {% if birthday %}
-                <input type='date' value="{{birthday}}" id="datefield">
-            {% else %}
-                <input type='date' id="datefield">
-            {% endif %}
-            <p></p>
+        <div id="profile-surname-div">
+            <div>
+                <label for="surnamefield">Surname</label>
+                {% if surname %}
+                    <input type="text" value={{surname}} id="surnamefield">
+                {% else %}
+                    <input type="text" id="surnamefield">
+                {% endif %}
+            </div>
         </div>
-    </p>
-    <button id="submit_btn">Submit</button>
-    <div>
-        <h2>CVs</h2>
-        <div id="cvs-container"></div>
+        </div>
+        <div id="profile-additional-data">
+        <div id="profile-date-div">
+            <div id="profile-date-label-div">
+                <label for="datefield" id="profile-date-label">Birthday</label>
+            </div>
+                {% if birthday %}
+                    <input type='date' value="{{birthday}}" id="datefield">
+                {% else %}
+                    <input type='date' id="datefield">
+                {% endif %}
+        </div>
+        </div>
+        <div id="profile-cvs-data">
+            <div id="cvs-container">
+                <div class="cv-file">
+                    <img src="../../static/temp/chill.jpg">
+                    <p>lol.txt</p>
+                </div>
+                <div class="cv-file">
+                    <img src="../../static/temp/chill.jpg">
+                    <p>lol.txt</p>
+                </div>
+                <div class="cv-file">
+                    <img src="../../static/temp/chill.jpg">
+                    <p>lol.txt</p>
+                </div>
+            </div>
+            <div id="profile-cvs-add">
+                <label for="cv-filefield">Add CV</label>
+                <input type="file" id="cv-filefield" accept=".pdf" style="visibility: hidden; position: absolute;">
+            </div>
+        </div>
     </div>
-    <h3>Upload</h3>
-    <div>
-        <input type="file" id="cv-filefield" accept=".pdf">
-        <p></p>
-    </div>
-    <button id="cv-upload">Upload</button> <br>
-    <button id="logout">Logout</button>
 </body>
 <script src="../scripts/info.js"></script>
 </html>

@@ -40,6 +40,46 @@ class CreateOpportunityFormatter(BaseSerializerFormatter, BaseDBFormatter):
     })
 
 
+class FilterOpportunitiesFormatter(BaseDBFormatter):
+    class ErrorCode(IntEnum):
+        INVALID_PROVIDER_ID = 200
+        INVALID_TAG_ID = 201
+        INVALID_GEO_TAG_ID = 202
+
+    @staticmethod
+    def append_invalid_provider_id_error(error: GenericError[ErrorCode, int], errors: ErrorTrace, _) -> None:
+        if 'provider_ids' not in errors:
+            errors['provider_ids'] = {}
+        tag_index = str(error.context)
+        if tag_index not in errors['provider_ids']:
+            errors['provider_ids'][tag_index] = []
+        errors['provider_ids'][tag_index].append({'type': error.error_code, 'message': error.error_message})
+
+    @staticmethod
+    def append_invalid_tag_id_error(error: GenericError[ErrorCode, int], errors: ErrorTrace, _) -> None:
+        if 'tag_ids' not in errors:
+            errors['tag_ids'] = {}
+        tag_index = str(error.context)
+        if tag_index not in errors['tag_ids']:
+            errors['tag_ids'][tag_index] = []
+        errors['tag_ids'][tag_index].append({'type': error.error_code, 'message': error.error_message})
+
+    @staticmethod
+    def append_invalid_geo_tag_id_error(error: GenericError[ErrorCode, int], errors: ErrorTrace, _) -> None:
+        if 'geo_tag_ids' not in errors:
+            errors['geo_tag_ids'] = {}
+        tag_index = str(error.context)
+        if tag_index not in errors['geo_tag_ids']:
+            errors['geo_tag_ids'][tag_index] = []
+        errors['geo_tag_ids'][tag_index].append({'type': error.error_code, 'message': error.error_message})
+
+    db_error_appender = BaseDBErrorAppender({
+        ErrorCode.INVALID_PROVIDER_ID: append_invalid_provider_id_error,
+        ErrorCode.INVALID_TAG_ID: append_invalid_tag_id_error,
+        ErrorCode.INVALID_GEO_TAG_ID: append_invalid_geo_tag_id_error,
+    })
+
+
 class AddOpportunityTagFormatter(BaseSerializerFormatter, BaseDBFormatter):
     class ErrorCode(IntEnum):
         INVALID_OPPORTUNITY_ID = 200
@@ -84,13 +124,6 @@ class AddOpportunityGeoTagFormatter(BaseSerializerFormatter, BaseDBFormatter):
         INVALID_OPPORTUNITY_ID = 200
         INVALID_GEO_TAG_ID = 201
 
-    # serializer_error_appender = APISerializerErrorAppender(
-    #     opportunity_id=append_serializer_field_error_factory(transform_id_error_factory('Opportunity id')),
-    #     geo_tag_ids=append_serializer_list_error_factory(
-    #         transformer=transform_list_error_factory('Geo tag ids'),
-    #         element_error_appender=append_serializer_field_error_factory(transform_id_error_factory('Geo tag id')),
-    #     ),
-    # )
     serializer_error_appender = RootSerializerErrorAppender(
         query=APISerializerErrorAppender(
             opportunity_id=append_serializer_field_error_factory(transform_id_error_factory('Opportunity id')),
